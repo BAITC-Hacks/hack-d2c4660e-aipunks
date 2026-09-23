@@ -1,10 +1,11 @@
 import { createServer } from 'node:http';
 import OpenAI from 'openai';
-import { openDatabase, importCatalog, readCatalog } from './database.mjs';
+import { openDatabase, importCatalog, readCatalog, defaultDatabase } from './database.mjs';
 import { MatchingWorker } from './worker.mjs';
 import { createExplainer, modelDefault, catalogFacts } from './explanations.mjs';
 import {createAssistant} from './assistant/runtime.mjs';
 import {createWorkspace, WorkspaceError} from './workspace.mjs';
+import {bootstrapAdmin} from './bootstrap-admin.mjs';
 import {AssistantError} from './assistant/validation.mjs';
 
 const host = process.env.HOST || '127.0.0.1';
@@ -14,6 +15,9 @@ const origins = new Set((process.env.ALLOWED_ORIGINS || 'http://localhost:5173,h
 const db = openDatabase();
 const imported = importCatalog(db);
 const catalog = readCatalog(db);
+const workspace=createWorkspace(db);
+const admin=await bootstrapAdmin(workspace,{dbPath:process.env.DB_PATH || defaultDatabase});
+if(admin.created)console.log(`Initial administrator created: ${admin.email}; ${admin.credentialsPath ? `credentials saved to ${admin.credentialsPath}` : 'password from ADMIN_PASSWORD'}`);
 const worker = new MatchingWorker();
 await worker.ready;
 const client = process.env.OPENAI_API_KEY ? new OpenAI({apiKey:process.env.OPENAI_API_KEY,maxRetries:0,timeout:6000}) : null;
@@ -22,7 +26,6 @@ if (!Number.isSafeInteger(maxCalls) || maxCalls < 0) throw Error('Invalid MAX_AI
 const explain = createExplainer({db,client,model:process.env.OPENAI_MODEL || modelDefault,maxCalls});
 const assistant=createAssistant({db,catalog,version:imported.version,apiKey:process.env.OPENAI_API_KEY,
   model:process.env.OPENAI_MODEL || modelDefault,maxCalls});
-const workspace=createWorkspace(db);
 let active = 0;
 let windowStart = Date.now(), requests = 0;
 let authRequests=0, aiRequests=0;

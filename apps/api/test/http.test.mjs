@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
-import {mkdtempSync,rmSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {root} from '../src/database.mjs';
@@ -11,7 +11,7 @@ test('HTTP catalog, CORS, version checks, forged selection and missing-key fallb
   const directory=mkdtempSync(join(tmpdir(),'event-match-http-'));
   const child=spawn(process.execPath,['src/server.mjs'],{
     cwd:join(root,'apps/api'),windowsHide:true,
-    env:{...process.env,PORT:'0',HOST:'127.0.0.1',DB_PATH:join(directory,'test.sqlite'),OPENAI_API_KEY:'',LOCAL_API_TOKEN:'',ALLOWED_ORIGINS:'http://localhost:5173'},
+    env:{...process.env,PORT:'0',HOST:'127.0.0.1',DB_PATH:join(directory,'test.sqlite'),ADMIN_EMAIL:'',ADMIN_NAME:'',ADMIN_PASSWORD:'',OPENAI_API_KEY:'',LOCAL_API_TOKEN:'',ALLOWED_ORIGINS:'http://localhost:5173'},
     stdio:['ignore','pipe','pipe'],
   });
   try {
@@ -47,6 +47,13 @@ test('HTTP catalog, CORS, version checks, forged selection and missing-key fallb
     assert.equal((await summarize({...summaryBody,ids:Array(4).fill(summaryBody.ids[0])})).status,400);
     assert.equal((await summarize({...summaryBody,catalog_version:'stale'})).status,409);
     const api=(path,payload,session)=>fetch(`${url}/v1/${path}`,{method:'POST',headers:{'Content-Type':'application/json',...(session?{Authorization:`Bearer ${session}`}:{})},body:JSON.stringify(payload)});
+    const adminCredentials=JSON.parse(readFileSync(join(directory,'test.sqlite.admin-credentials.json'),'utf8'));
+    const adminLogin=await api('auth',{op:'login',...adminCredentials});
+    assert.equal(adminLogin.status,200);
+    const admin=(await adminLogin.json()).data;
+    assert.equal((await (await api('workspace',{op:'staff'},admin.token)).json()).data.role,'admin');
+    assert.equal((await api('workspace',{op:'listAccounts'},admin.token)).status,200);
+    await api('auth',{op:'logout'},admin.token);
     const registered=await api('auth',{op:'register',name:'HTTP test',email:'http@example.test',password:'local-password-test'});
     assert.equal(registered.status,200);const account=(await registered.json()).data;
     assert.equal((await api('workspace',{op:'account'},account.token)).status,200);

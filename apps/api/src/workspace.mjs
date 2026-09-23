@@ -49,6 +49,38 @@ export function createWorkspace(db) {
   const requireStaff=(uid,admin=false)=>{requireActive(uid);if(!(admin?role(uid)==='admin':['admin','moderator'].includes(role(uid))))fail(403,'Недостаточно прав.');};
   const requireOwner=(uid,target)=>{if(uid!==target)fail(403,'Нет доступа к чужим данным.');};
   const issue=uid=>{const token=randomBytes(32).toString('base64url');db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(token),uid,Date.now()+12*3600000);return {token,identity:identity(uid)};};
+  async function prepareAccount(email,password,name,accountType='client') {
+    const uid=randomUUID(),salt=randomBytes(16).toString('hex');
+    const digest=(await scrypt(password,salt,64)).toString('hex');
+    return {uid,email,name,salt,digest,accountType};
+  }
+  function insertAccount({uid,email,name,salt,digest,accountType}) {
+    db.prepare('INSERT INTO users VALUES(?,?,?,?)').run(uid,email,salt,digest);
+    put('account',uid,uid,{uid,name,email,accountType,status:'active',deletionRequested:false,revision:1});
+  }
+  // Server startup only: this method is never dispatched by auth() or rpc().
+  // Resolve credentials lazily so an existing administrator is left untouched.
+  async function ensureInitialAdmin(configure) {
+    const existingAdmin=()=>db.prepare(`SELECT u.email FROM users u
+      JOIN workspace s ON s.kind='staff' AND s.owner=u.uid AND s.id=u.uid
+      WHERE json_extract(s.payload,'$.role')='admin' LIMIT 1`).get();
+    const existing=existingAdmin();
+    if(existing)return {created:false,email:existing.email};
+    const {email,password,name,persist=()=>{}}=configure();
+    const record=await prepareAccount(email,password,name);
+    return tx(()=>{
+      const existing=existingAdmin();
+      if(existing)return {created:false,email:existing.email};
+      if(db.prepare('SELECT uid FROM users WHERE email=?').get(email)) {
+        throw Error('Initial admin email is already registered. Choose another ADMIN_EMAIL or use npm run admin:grant -- <email> locally.');
+      }
+      insertAccount(record);
+      put('staff',record.uid,record.uid,{role:'admin',revision:1});
+      // Fail the transaction if generated credentials cannot be saved locally.
+      persist();
+      return {created:true,email};
+    });
+  }
   async function auth(body,token) {
     if(body.op==='register'||body.op==='login') {
       const email=parse(z.string().trim().email().max(254),body.email).toLowerCase();
@@ -58,10 +90,9 @@ export function createWorkspace(db) {
         const name=parse(short,body.name);
         const accountType=parse(z.enum(['client','contractor']).default('client'),body.accountType);
         if(old)fail(409,'Этот адрес уже зарегистрирован.');
-        const uid=randomUUID(),salt=randomBytes(16).toString('hex');
-        const digest=(await scrypt(password,salt,64)).toString('hex');
-        tx(()=>{db.prepare('INSERT INTO users VALUES(?,?,?,?)').run(uid,email,salt,digest);put('account',uid,uid,{uid,name,email,accountType,status:'active',deletionRequested:false,revision:1});});
-        return issue(uid);
+        const record=await prepareAccount(email,password,name,accountType);
+        tx(()=>insertAccount(record));
+        return issue(record.uid);
       }
       // Constant-cost check also for unknown emails; no user enumeration on login.
       const digest=await scrypt(password,old?.salt??'missing-account',64);
@@ -178,6 +209,6 @@ export function createWorkspace(db) {
     }
     fail(400,'Неизвестная операция переписки.');
   }
-  return {auth,rpc,messaging};
+  return {auth,rpc,messaging,ensureInitialAdmin};
 }
 function snapshot(p) {const c=p.content;return {id:p.ownerId,anon_name:c.name,city:c.city,categories:c.categories,price_from_kzt:c.price,event_formats:c.formats,languages:c.languages,max_hours:c.maxHours,busy_dates:[],description:c.description,synthetic:false,city_imputed:false,price_imputed:false,is_live:true,contact:c.contact,portfolio_urls:c.portfolioUrls};}
