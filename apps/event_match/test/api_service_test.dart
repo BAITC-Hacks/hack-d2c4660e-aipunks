@@ -9,6 +9,47 @@ import 'package:event_match/features/matching/domain/models.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'catalog summaries preserve IDs, cache successes and honor AI toggle',
+    () async {
+      final repo = AssetCatalogRepository();
+      final catalog = await repo.load();
+      final profiles = catalog.take(3).toList();
+      var calls = 0;
+      final service = ApiRecommendationService(
+        repo,
+        baseUrl: 'http://test',
+        client: MockClient((request) async {
+          calls++;
+          expect(request.url.path, '/v1/summaries');
+          final input = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(input.containsKey('description'), isFalse);
+          return http.Response(
+            jsonEncode({
+              'catalog_version': input['catalog_version'],
+              'cards': [
+                for (final id in input['ids'])
+                  {
+                    'id': id,
+                    'explanation':
+                        'Краткая сводка услуг по данным профиля. Условия можно уточнить в описании.',
+                    'source': 'llm',
+                  },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
+        }),
+      );
+      expect((await service.summarize(profiles, catalog)).length, 3);
+      expect((await service.summarize(profiles, catalog)).length, 3);
+      expect(calls, 1);
+      service.aiEnabled = false;
+      expect(await service.summarize(profiles, catalog), isEmpty);
+      expect(calls, 1);
+    },
+  );
   final request = MatchRequest(
     city: 'Алматы',
     category: 'Ведущий',
