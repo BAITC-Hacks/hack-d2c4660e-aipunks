@@ -6,7 +6,9 @@
 - [Кабинеты, правила доступа, модерация и служебные инструменты](docs/accounts-backend.md)
 - [Приёмка кабинетов и границы выполненной проверки](docs/accounts-acceptance.md)
 - [Архитектура](docs/architecture.md) · [подбор](docs/pipeline.md) · [разработка](docs/development.md)
+- [Помощник: отдельный демонстрационный сценарий](docs/assistant.md) · [контракт](docs/assistant-contract.md)
 - [Дизайн-система](design-system/event-match/MASTER.md)
+- [Исследование рынка и экосистема функций](docs/feature-ecosystem.md)
 
 ## Что работает в коде
 
@@ -18,6 +20,7 @@
 | Подрядчик `/contractor/overview` | Черновик, замороженная версия на проверке, замечания, календарь, снятие публикации |
 | Команда `/admin/overview` | Модерация с версиями, блокировки, модераторы, качество каталога и журнал |
 | Демо `/demo` | Исходные 66 анонимизированных анкет и окно дат 23.09–31.12.2026 |
+| Помощник `/assistant` | Отдельный демосценарий; требования AI/backend описаны в документации помощника |
 
 Email должен быть подтверждён для личных данных. Кабинет подрядчика добавляется к тому же аккаунту; переключение кабинета не выдаёт служебных прав. Первый администратор назначается доверенным инструментом после регистрации.
 
@@ -79,6 +82,7 @@ apps/event_match/lib/app/                 тема, маршруты, оболо
 apps/event_match/lib/features/auth/       Firebase gateway, сессия, вход
 apps/event_match/lib/features/workspace/  модели, Firestore, кабинеты
 apps/event_match/lib/features/matching/   формы, карточки, ядро подбора
+apps/event_match/lib/features/assistant/  отдельный демопомощник
 firestore.rules                          серверный доступ и аудит
 backend/                                 эмуляторы, tests, служебная CLI
 ```

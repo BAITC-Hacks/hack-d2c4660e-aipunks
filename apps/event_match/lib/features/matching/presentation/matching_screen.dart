@@ -9,9 +9,15 @@ import 'widgets/catalog_hero.dart';
 import '../../../app/design_tokens.dart';
 
 class MatchingScreen extends StatefulWidget {
-  const MatchingScreen({super.key, required this.repository, this.service});
+  const MatchingScreen({
+    super.key,
+    required this.repository,
+    this.service,
+    this.onOpenAssistant,
+  });
   final CatalogRepository repository;
   final RecommendationService? service;
+  final ValueChanged<MatchRequest?>? onOpenAssistant;
   @override
   State<MatchingScreen> createState() => _MatchingScreenState();
 }
@@ -420,6 +426,21 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
+                                if (widget.onOpenAssistant != null)
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton.icon(
+                                      onPressed: () => widget.onOpenAssistant!(
+                                        controller.lastRequest,
+                                      ),
+                                      icon: const Icon(
+                                        Icons.chat_bubble_outline,
+                                      ),
+                                      label: const Text(
+                                        'Обсудить условия с помощником · демо',
+                                      ),
+                                    ),
+                                  ),
                                 if (request == null) ...[
                                   TextField(
                                     key: const Key('catalog-search'),

@@ -10,3 +10,5 @@ ui-debug.log*
 !.env.example
 .secret.local
 **/node_modules/
+functions/lib/
+functions/.secret.local

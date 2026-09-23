@@ -16,4 +16,4 @@
 
 Из `apps/event_match`: `dart format --output=none --set-exit-if-changed lib test`, `flutter analyze`, `flutter test`, `flutter build web`, `flutter build apk --debug`. Из корня: `npm --prefix backend test`. Анализатор исключает сгенерированные `build/**`, включая копии iOS-плагинов; собственный код и тесты проверяются целиком.
 
-Local/cloud настройка — в [firebase.md](firebase.md), серверные сценарии — в [accounts-backend.md](accounts-backend.md).
+Local/cloud настройка — в [firebase.md](firebase.md), серверные сценарии — в [accounts-backend.md](accounts-backend.md). Отдельный AI-контракт — [assistant-contract.md](assistant-contract.md); он не меняет права и данные живых кабинетов.

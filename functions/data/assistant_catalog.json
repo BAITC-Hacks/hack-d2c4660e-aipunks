@@ -1,0 +1,1630 @@
+{
+  "schemaVersion": 1,
+  "datasetVersion": "sha256:0929ddf26322f6c5e888071aecc2750feaefbe9f8ce1f6c1374cbbf89d92a555",
+  "featureVersion": "1",
+  "source": "apps/event_match/assets/data/catalog.jsonl",
+  "evidencePolicy": "Quotes are exact source substrings. Profile statements are not independently verified. Missing features mean unknown. Semantic features never override structured city, category, date, price, format, language or hours.",
+  "featureDefinitions": [
+    {
+      "key": "calm_delivery",
+      "label": "Спокойная подача",
+      "description": "Спокойная, ненавязчивая или ненапряженная подача; не обещает отсутствие интерактивов."
+    },
+    {
+      "key": "dynamic_delivery",
+      "label": "Динамичная атмосфера",
+      "description": "Энергичная подача, динамика вечера или сцены."
+    },
+    {
+      "key": "intelligent_humor",
+      "label": "Интеллигентный юмор",
+      "description": "Прямое упоминание интеллектуального, интеллигентного или тонкого юмора."
+    },
+    {
+      "key": "comedy_experience",
+      "label": "Опыт юмористических проектов",
+      "description": "Прямое участие в КВН или stand-up; не устанавливает тип юмора."
+    },
+    {
+      "key": "improvisation",
+      "label": "Импровизация",
+      "description": "Прямо заявленные импровизация или участие в импровизационных проектах."
+    },
+    {
+      "key": "interactive_program",
+      "label": "Интерактивы с гостями",
+      "description": "Интерактивы, игры, конкурсы или активное взаимодействие с публикой."
+    },
+    {
+      "key": "no_generic_contests",
+      "label": "Без банальных конкурсов",
+      "description": "Исключаются именно банальные конкурсы; это НЕ отсутствие любых конкурсов."
+    },
+    {
+      "key": "no_contests",
+      "label": "Совсем без конкурсов",
+      "description": "Требует прямого обещания не проводить никакие конкурсы. В текущих профилях не подтверждено."
+    },
+    {
+      "key": "no_long_speeches",
+      "label": "Без долгих речей",
+      "description": "Прямое обещание отсутствия долгих речей и наставлений."
+    },
+    {
+      "key": "documentary_photo",
+      "label": "Репортажная съёмка",
+      "description": "Репортажная/документальная съемка; сама по себе не исключает постановочные кадры."
+    },
+    {
+      "key": "natural_emotions",
+      "label": "Живые эмоции",
+      "description": "Прямо заявленные живые, искренние или естественные эмоции в съемке."
+    },
+    {
+      "key": "posing_help",
+      "label": "Помощь перед камерой",
+      "description": "Помощь с позированием или адаптацией людей без опыта съемок."
+    },
+    {
+      "key": "unobtrusive_work",
+      "label": "Ненавязчивая съёмка",
+      "description": "Фотограф/видеограф прямо заявляет незаметную или ненавязчивую работу."
+    },
+    {
+      "key": "corporate_experience",
+      "label": "Опыт деловых событий",
+      "description": "Описание прямо указывает корпоративы, бизнес-ивенты, деловые встречи или форумы."
+    },
+    {
+      "key": "large_event_experience",
+      "label": "Опыт крупных событий",
+      "description": "Прямое упоминание масштабных мероприятий или крупных событий; не вместимость площадки."
+    },
+    {
+      "key": "intimate_event_experience",
+      "label": "Камерные события",
+      "description": "Прямое упоминание камерных мероприятий или конкретных небольших групп."
+    },
+    {
+      "key": "wedding_experience",
+      "label": "Опыт свадеб",
+      "description": "Прямое упоминание свадебной специализации/проектов."
+    },
+    {
+      "key": "personalized_program",
+      "label": "Индивидуальный сценарий",
+      "description": "Сценарий разрабатывается под клиента/пару."
+    },
+    {
+      "key": "international_experience",
+      "label": "Международный опыт",
+      "description": "Указаны выполненные проекты за рубежом; не гарантирует выезд на новое событие."
+    },
+    {
+      "key": "experience_10_plus",
+      "label": "Опыт от 10 лет",
+      "description": "Профиль прямо заявляет как минимум 10 лет опыта; это сведения профиля, не независимая проверка."
+    },
+    {
+      "key": "jazz",
+      "label": "Джаз",
+      "description": "Прямое упоминание джазового проекта или джазового репертуара."
+    },
+    {
+      "key": "kazakh_repertoire",
+      "label": "Казахский репертуар",
+      "description": "Прямое упоминание казахских песен, мелодий или музыки; не выводится из категории ансамбля."
+    },
+    {
+      "key": "retro_repertoire",
+      "label": "Ретро-хиты",
+      "description": "Прямое упоминание ретро или хитов 80-х/90-х/2000-х."
+    },
+    {
+      "key": "modern_repertoire",
+      "label": "Современные композиции",
+      "description": "Прямое упоминание современных музыкальных композиций/хитов/аранжировок."
+    },
+    {
+      "key": "welcome_music",
+      "label": "Музыка для welcome",
+      "description": "Описание прямо предлагает музыку для welcome-зоны."
+    },
+    {
+      "key": "live_show",
+      "label": "Музыкальное шоу",
+      "description": "Музыка сочетается с шоу/хореографией, а не просто фоновое исполнение."
+    },
+    {
+      "key": "vocal_music",
+      "label": "Вокал",
+      "description": "Описание прямо упоминает вокал, вокалистов или исполнение песен."
+    },
+    {
+      "key": "classical_music",
+      "label": "Классика",
+      "description": "Прямо указан классический репертуар."
+    },
+    {
+      "key": "violin",
+      "label": "Скрипка",
+      "description": "Прямо заявлены выступления на скрипке; наличие струнного квартета не доказывает сольную скрипку."
+    },
+    {
+      "key": "saxophone",
+      "label": "Саксофон",
+      "description": "Прямое упоминание саксофона в составе или сольном выступлении."
+    },
+    {
+      "key": "terrace",
+      "label": "Терраса",
+      "description": "Терраса прямо упомянута в описании; сезонность и доступность требуют уточнения."
+    },
+    {
+      "key": "mountain_view",
+      "label": "Вид на горы",
+      "description": "Прямое упоминание вида/панорамы гор."
+    },
+    {
+      "key": "national_cuisine",
+      "label": "Казахская кухня",
+      "description": "Прямо заявлена национальная казахская кухня."
+    },
+    {
+      "key": "italian_cuisine",
+      "label": "Итальянская кухня",
+      "description": "Прямо заявлена итальянская кухня."
+    },
+    {
+      "key": "quiet_venue",
+      "label": "Спокойная площадка",
+      "description": "Описание заявляет спокойный или уединенный отдых; не гарантия уровня шума на мероприятии."
+    },
+    {
+      "key": "turnkey_decor",
+      "label": "Декор под ключ",
+      "description": "Прямо заявлена работа под ключ или проект с монтажом и демонтажем."
+    },
+    {
+      "key": "custom_design",
+      "label": "Индивидуальный дизайн",
+      "description": "Дизайн/эскизы/концепция создаются под клиента или мероприятие."
+    },
+    {
+      "key": "personalized_gifts",
+      "label": "Персонализированные подарки",
+      "description": "Именные изделия, фотографии, логотипы или оформление под тематику события."
+    },
+    {
+      "key": "branded_merch",
+      "label": "Брендированные сувениры",
+      "description": "Прямо заявлены изделия с логотипом/брендированием."
+    },
+    {
+      "key": "seasonal_flowers",
+      "label": "Сезонные цветы",
+      "description": "Прямо заявлена работа с сезонными цветами."
+    },
+    {
+      "key": "minimalist_decor",
+      "label": "Минималистичный декор",
+      "description": "Минимализм прямо упомянут как доступный стиль."
+    },
+    {
+      "key": "light_installations",
+      "label": "Световые решения",
+      "description": "Прямо заявлены неон, световые инсталляции или световые/пиксельные шоу."
+    },
+    {
+      "key": "photo_print",
+      "label": "Печать фото",
+      "description": "Прямо заявлена печать фотографий фотобудкой; скорость печати не предполагается."
+    },
+    {
+      "key": "interactive_photo",
+      "label": "Интерактивная фотозона",
+      "description": "Прямо заявлены интерактивные фото/видеозоны или взаимодействие с фотобудкой."
+    },
+    {
+      "key": "presentation_equipment",
+      "label": "Оборудование для презентаций",
+      "description": "Описание прямо заявляет техническое оснащение для презентаций."
+    },
+    {
+      "key": "parking",
+      "label": "Парковка",
+      "description": "Прямо заявлена парковка для гостей."
+    },
+    {
+      "key": "own_catering",
+      "label": "Свой кейтеринг",
+      "description": "Прямо заявлен собственный кейтеринг; состав и стоимость не известны."
+    },
+    {
+      "key": "capacity_200",
+      "label": "Зал до 200 гостей",
+      "description": "Вместимость именно до 200 гостей прямо заявлена; не подходит как доказательство для большего количества."
+    },
+    {
+      "key": "full_day_video",
+      "label": "Видеосъёмка полного дня",
+      "description": "Прямо указан full day; точное число часов определяется структурным max_hours/уточнением."
+    }
+  ],
+  "featureLabels": {
+    "calm_delivery": "Спокойная подача",
+    "dynamic_delivery": "Динамичная атмосфера",
+    "intelligent_humor": "Интеллигентный юмор",
+    "comedy_experience": "Опыт юмористических проектов",
+    "improvisation": "Импровизация",
+    "interactive_program": "Интерактивы с гостями",
+    "no_generic_contests": "Без банальных конкурсов",
+    "no_contests": "Совсем без конкурсов",
+    "no_long_speeches": "Без долгих речей",
+    "documentary_photo": "Репортажная съёмка",
+    "natural_emotions": "Живые эмоции",
+    "posing_help": "Помощь перед камерой",
+    "unobtrusive_work": "Ненавязчивая съёмка",
+    "corporate_experience": "Опыт деловых событий",
+    "large_event_experience": "Опыт крупных событий",
+    "intimate_event_experience": "Камерные события",
+    "wedding_experience": "Опыт свадеб",
+    "personalized_program": "Индивидуальный сценарий",
+    "international_experience": "Международный опыт",
+    "experience_10_plus": "Опыт от 10 лет",
+    "jazz": "Джаз",
+    "kazakh_repertoire": "Казахский репертуар",
+    "retro_repertoire": "Ретро-хиты",
+    "modern_repertoire": "Современные композиции",
+    "welcome_music": "Музыка для welcome",
+    "live_show": "Музыкальное шоу",
+    "vocal_music": "Вокал",
+    "classical_music": "Классика",
+    "violin": "Скрипка",
+    "saxophone": "Саксофон",
+    "terrace": "Терраса",
+    "mountain_view": "Вид на горы",
+    "national_cuisine": "Казахская кухня",
+    "italian_cuisine": "Итальянская кухня",
+    "quiet_venue": "Спокойная площадка",
+    "turnkey_decor": "Декор под ключ",
+    "custom_design": "Индивидуальный дизайн",
+    "personalized_gifts": "Персонализированные подарки",
+    "branded_merch": "Брендированные сувениры",
+    "seasonal_flowers": "Сезонные цветы",
+    "minimalist_decor": "Минималистичный декор",
+    "light_installations": "Световые решения",
+    "photo_print": "Печать фото",
+    "interactive_photo": "Интерактивная фотозона",
+    "presentation_equipment": "Оборудование для презентаций",
+    "parking": "Парковка",
+    "own_catering": "Свой кейтеринг",
+    "capacity_200": "Зал до 200 гостей",
+    "full_day_video": "Видеосъёмка полного дня"
+  },
+  "profiles": [
+    {
+      "id": "HK-39372",
+      "reviewed": true,
+      "features": [],
+      "reviewNote": "Заявлена авторская флористика, но конкретные стили, цветы и индивидуальная разработка не описаны."
+    },
+    {
+      "id": "HK-44733",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "опытом работы более 10 лет"
+        },
+        {
+          "key": "calm_delivery",
+          "polarity": "supports",
+          "quote": "Стиль ведения интеллигентный, не напряжный, атмосферный."
+        },
+        {
+          "key": "intimate_event_experience",
+          "polarity": "supports",
+          "quote": "ламповые вечера от 8 человек"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "крупные бизнес форумы на 3000 человек"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "крупные бизнес форумы на 3000 человек"
+        },
+        {
+          "key": "international_experience",
+          "polarity": "supports",
+          "quote": "Наурыз в Маями (Флорида) 600+ человек"
+        }
+      ]
+    },
+    {
+      "id": "HK-80581",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "improvisation",
+          "polarity": "supports",
+          "quote": "Резидент клуба импровизаторов Improv Konoha"
+        },
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "Обладаю приятным тембром голоса и владею вокалом"
+        }
+      ],
+      "reviewNote": "Награды, физические данные и семейное положение не используются как доказательство качества подбора."
+    },
+    {
+      "id": "HK-88430",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "создавать живую, динамичную атмосферу"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "Специализируюсь на проведении корпоративных мероприятий, торжеств и деловых встреч."
+        },
+        {
+          "key": "intelligent_humor",
+          "polarity": "supports",
+          "quote": "сочетание интеллигентного юмора"
+        }
+      ]
+    },
+    {
+      "id": "HK-58385",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "Его стиль — это энергия сцены, интеллектуальный юмор и мощная импровизация."
+        },
+        {
+          "key": "intelligent_humor",
+          "polarity": "supports",
+          "quote": "интеллектуальный юмор"
+        },
+        {
+          "key": "improvisation",
+          "polarity": "supports",
+          "quote": "мощная импровизация"
+        },
+        {
+          "key": "no_generic_contests",
+          "polarity": "supports",
+          "quote": "Без шаблонов и банальных конкурсов"
+        },
+        {
+          "key": "interactive_program",
+          "polarity": "supports",
+          "quote": "живой диалог с гостями, настоящие эмоции и атмосфера, в которой каждый человек в зале становится частью происходящего."
+        },
+        {
+          "key": "calm_delivery",
+          "polarity": "contradicts",
+          "quote": "Если вам нужен тихий, формальный вечер — возможно, мы не подойдём друг другу."
+        }
+      ],
+      "reviewNote": "Нет обещания отсутствия любых конкурсов. Отрицание относится только к банальным конкурсам."
+    },
+    {
+      "id": "HK-42352",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Опыт ведения свадеб 13 лет"
+        },
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "Опыт ведения свадеб 13 лет"
+        },
+        {
+          "key": "international_experience",
+          "polarity": "supports",
+          "quote": "Вел свадьбы в Алматы, Москве, Дубае, Бодруме, Ташкенте"
+        }
+      ],
+      "reviewNote": "Фраза «0 разводов» не является доказательством качества или гарантией."
+    },
+    {
+      "id": "HK-37181",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "ВЕДУ МЕРОПРИЯТИЯ УЖЕ БОЛЕЕ 15 ЛЕТ."
+        },
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "ОСНОВНЫЕ СТИЛИ ВЕДЕНИЯ МЕРОПРИЯТИЙ – ДИНАМИКА, ИМПРОВИЗАЦИЯ, ИНТЕРАКТИВЫ."
+        },
+        {
+          "key": "improvisation",
+          "polarity": "supports",
+          "quote": "ДИНАМИКА, ИМПРОВИЗАЦИЯ, ИНТЕРАКТИВЫ"
+        },
+        {
+          "key": "interactive_program",
+          "polarity": "supports",
+          "quote": "АВТОРСКИМ СЦЕНАРИЕМ И АДРЕСНЫМИ КОНКУРСАМИ"
+        },
+        {
+          "key": "personalized_program",
+          "polarity": "supports",
+          "quote": "К КАЖДОМУ МЕРОПРИЯТИЮ ПОДХОДИТЬ С АВТОРСКИМ СЦЕНАРИЕМ"
+        }
+      ]
+    },
+    {
+      "id": "HK-26808",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "comedy_experience",
+          "polarity": "supports",
+          "quote": "Сценарист команды КВН Высшей лиги Резидент и основатель клуба «Ghibli Stand-Up»"
+        }
+      ],
+      "reviewNote": "КВН/stand-up подтверждают юмористический опыт, но не спокойную подачу или отказ от конкурсов."
+    },
+    {
+      "id": "HK-76268",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "свадебный фотограф"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "Люблю живые кадры, настоящие улыбки и моменты, которые невозможно повторить."
+        }
+      ]
+    },
+    {
+      "id": "HK-10990",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "WEDDING VIDEOGRAPHER"
+        }
+      ],
+      "reviewNote": "Награда колориста не доказывает конкретную цветовую стилистику или качество результата."
+    },
+    {
+      "id": "HK-61323",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Я свадебный фотограф."
+        },
+        {
+          "key": "documentary_photo",
+          "polarity": "supports",
+          "quote": "свадебный фотожурнализм, документально — свадебный фотожурнализм"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "стараюсь сохранить самые искренние эмоции"
+        },
+        {
+          "key": "posing_help",
+          "polarity": "supports",
+          "quote": "Если у вас нет опыта в сьемках , я научу, как свободно чувствовать себя перед камерой и получить удовольствие от съемки."
+        }
+      ]
+    },
+    {
+      "id": "HK-74914",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Я свадебный видеограф из Астаны."
+        }
+      ],
+      "reviewNote": "Готовность работать по Казахстану не доказывает выполненные международные проекты."
+    },
+    {
+      "id": "HK-30583",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Являюсь свадебным фотографом."
+        },
+        {
+          "key": "international_experience",
+          "polarity": "supports",
+          "quote": "География моих съемок: Франция(fashion week), Италия, Великобритания, Турция, Грузия, ОАЭ, Азербайджан"
+        }
+      ]
+    },
+    {
+      "id": "HK-97737",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Специализируюсь на свадебной и семейной съёмке"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "создавая фотографии с живыми эмоциями и атмосферой"
+        }
+      ]
+    },
+    {
+      "id": "HK-98562",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "свадебный фотограф"
+        },
+        {
+          "key": "intimate_event_experience",
+          "polarity": "supports",
+          "quote": "от камерных мероприятий до масштабных свадеб"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "от камерных мероприятий до масштабных свадеб"
+        },
+        {
+          "key": "posing_help",
+          "polarity": "supports",
+          "quote": "Я помогаю невестам выглядеть естественно и уверенно даже без модельного опыта — направляю, подсказываю позирование и создаю спокойную атмосферу в кадре."
+        }
+      ]
+    },
+    {
+      "id": "HK-53108",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "international_experience",
+          "polarity": "supports",
+          "quote": "Я снимал в разных городах и странах — Париже, Дубае, Москве, Китае."
+        }
+      ],
+      "reviewNote": "Поэтическое «тишина внутри кадра» не трактуется как обещание ненавязчивого процесса съемки."
+    },
+    {
+      "id": "HK-11484",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "custom_design",
+          "polarity": "supports",
+          "quote": "Каждый проект — индивидуальная концепция, отражающая стиль и статус клиента."
+        },
+        {
+          "key": "turnkey_decor",
+          "polarity": "supports",
+          "quote": "Работаем под ключ: от идеи и эскиза до монтажа и финальной реализации."
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "опыт крупных проектов и масштабных площадок"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "создаём концепции свадеб, юбилеев и корпоративных событий"
+        }
+      ]
+    },
+    {
+      "id": "HK-97041",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "Тэнъя ведёт 12 лет"
+        }
+      ],
+      "reviewNote": "«Интеллигентно, с юмором» не уточняет тип юмора или степень интерактивности."
+    },
+    {
+      "id": "HK-60927",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "custom_design",
+          "polarity": "supports",
+          "quote": "Каждый заказ изготавливается индивидуально под концепцию мероприятия."
+        },
+        {
+          "key": "personalized_gifts",
+          "polarity": "supports",
+          "quote": "леденцы с именами, датами, фотографиями, логотипами и персональными надписями"
+        },
+        {
+          "key": "branded_merch",
+          "polarity": "supports",
+          "quote": "леденцы с именами, датами, фотографиями, логотипами и персональными надписями"
+        }
+      ],
+      "reviewNote": "Медицинские обещания про глюкозу и пользу изомальта не используются."
+    },
+    {
+      "id": "HK-62242",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "свадебный видеограф"
+        },
+        {
+          "key": "international_experience",
+          "polarity": "supports",
+          "quote": "Юдзи работал в Японии, Италии, Грузии, Дубае, Москве и Казахстане."
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "ценят глубину, искренность и живые эмоции"
+        }
+      ]
+    },
+    {
+      "id": "HK-44923",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "personalized_program",
+          "polarity": "supports",
+          "quote": "Разработанный ТОЛЬКО для Вас сценарий"
+        },
+        {
+          "key": "improvisation",
+          "polarity": "supports",
+          "quote": "Импровизация, живой интеллигентный юмор"
+        },
+        {
+          "key": "intelligent_humor",
+          "polarity": "supports",
+          "quote": "живой интеллигентный юмор"
+        },
+        {
+          "key": "interactive_program",
+          "polarity": "supports",
+          "quote": "Современные интерактивы, креативные идеи"
+        },
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "Динамичный праздник без шаблонов и банальностей"
+        }
+      ],
+      "reviewNote": "«Без шаблонов и банальностей» не обещает отсутствие конкурсов."
+    },
+    {
+      "id": "HK-91112",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "свадебный фотограф"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "Я люблю честные эмоции, лёгкость и кадры с воздухом"
+        },
+        {
+          "key": "unobtrusive_work",
+          "polarity": "supports",
+          "quote": "живая, эстетичная и ненавязчивая фотография"
+        }
+      ]
+    },
+    {
+      "id": "HK-77793",
+      "reviewed": true,
+      "features": [],
+      "reviewNote": "Описание содержит только категорию и языки; они уже есть в структурных полях. Стиль не установлен."
+    },
+    {
+      "id": "HK-76335",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "В её кадрах — живые эмоции, естественность и аккуратная эстетика"
+        }
+      ]
+    },
+    {
+      "id": "HK-20640",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "внимание к деталям, живые эмоции и аккуратная, эстетичная подача"
+        }
+      ]
+    },
+    {
+      "id": "HK-16628",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Является свадебным и репортажным фотографом"
+        },
+        {
+          "key": "documentary_photo",
+          "polarity": "supports",
+          "quote": "Является свадебным и репортажным фотографом"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "умеет ловить живые эмоции и передавать атмосферу события через искренние, естественные кадры"
+        }
+      ],
+      "reviewNote": "«Работает ... за рубежом» не дает списка выполненных международных проектов."
+    },
+    {
+      "id": "HK-68220",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "свадебных и репортажных фотографов"
+        },
+        {
+          "key": "documentary_photo",
+          "polarity": "supports",
+          "quote": "сочетание репортажной съемки(захват моментов) и постановочных кадров"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "Фотографии получаются живыми, яркими и передающими чувства и атмосферу."
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "Концерт «Тенгри Саунд» с 30 тыс зрителей."
+        }
+      ],
+      "reviewNote": "Отзывы внутри описания не преобразуются в независимый рейтинг. Репортаж не означает отсутствие постановки."
+    },
+    {
+      "id": "HK-74147",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "музыкальное сопровождение для свадеб, корпоративов, юбилеев, концертов и частных событий"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "музыкальное сопровождение для свадеб, корпоративов, юбилеев, концертов и частных событий"
+        }
+      ],
+      "reviewNote": "У дуэта не перечислены инструменты или конкретные жанры."
+    },
+    {
+      "id": "HK-35913",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "более чем 10-летним опытом"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "от камерных торжеств до крупных форумов и презентаций"
+        },
+        {
+          "key": "intimate_event_experience",
+          "polarity": "supports",
+          "quote": "от камерных торжеств до крупных форумов и презентаций"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "от камерных торжеств до крупных форумов и презентаций"
+        },
+        {
+          "key": "unobtrusive_work",
+          "polarity": "supports",
+          "quote": "оставаясь незаметным для гостей и организаторов"
+        }
+      ]
+    },
+    {
+      "id": "HK-46450",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "jazz",
+          "polarity": "supports",
+          "quote": "джазовый проект с шестилетней историей на сцене Казахстана"
+        },
+        {
+          "key": "kazakh_repertoire",
+          "polarity": "supports",
+          "quote": "от казахских народных мелодий до современных мировых хитов"
+        },
+        {
+          "key": "modern_repertoire",
+          "polarity": "supports",
+          "quote": "до современных мировых хитов"
+        },
+        {
+          "key": "welcome_music",
+          "polarity": "supports",
+          "quote": "Trio — welcome-зоны и камерные вечера"
+        },
+        {
+          "key": "intimate_event_experience",
+          "polarity": "supports",
+          "quote": "Подходит для welcome-формата и сопровождения камерных мероприятий."
+        },
+        {
+          "key": "saxophone",
+          "polarity": "supports",
+          "quote": "контрабас-вокал + гитара + саксофон / домбра"
+        },
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "контрабас-вокал + гитара + саксофон / домбра"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "открытий бутиков и бизнес-ивентов"
+        }
+      ]
+    },
+    {
+      "id": "HK-25279",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "сверкаем — звуком, энергией и атмосферой, которую создаём на сцене"
+        }
+      ],
+      "reviewNote": "Конкретный репертуар и состав не указаны."
+    },
+    {
+      "id": "HK-92824",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "Гармония песни и красоты"
+        }
+      ],
+      "reviewNote": "Категория национального ансамбля сама по себе не доказывает язык репертуара."
+    },
+    {
+      "id": "HK-36965",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "kazakh_repertoire",
+          "polarity": "supports",
+          "quote": "Прославляем казахскую песню на весь мир"
+        },
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "Прославляем казахскую песню на весь мир"
+        }
+      ]
+    },
+    {
+      "id": "HK-39301",
+      "reviewed": true,
+      "features": [],
+      "reviewNote": "Описание содержит рекламное «№1» и выступление перед главой государства, но не жанр, репертуар или формат взаимодействия."
+    },
+    {
+      "id": "HK-45928",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "специализируется на свадебной, семейной и рекламной съёмке"
+        },
+        {
+          "key": "natural_emotions",
+          "polarity": "supports",
+          "quote": "работает с живыми эмоциями и настоящими моментами"
+        },
+        {
+          "key": "unobtrusive_work",
+          "polarity": "supports",
+          "quote": "остаётся почти незаметным в кадре"
+        },
+        {
+          "key": "full_day_video",
+          "polarity": "supports",
+          "quote": "Формат съёмки: full day"
+        }
+      ]
+    },
+    {
+      "id": "HK-83709",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "kazakh_repertoire",
+          "polarity": "supports",
+          "quote": "большой выбор казахских песен"
+        },
+        {
+          "key": "retro_repertoire",
+          "polarity": "supports",
+          "quote": "ретро-шлягеров, хитов 80-х, 90-х, 2000-х"
+        },
+        {
+          "key": "modern_repertoire",
+          "polarity": "supports",
+          "quote": "современные хиты"
+        },
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "4 вокалиста"
+        }
+      ]
+    },
+    {
+      "id": "HK-23752",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "kazakh_repertoire",
+          "polarity": "supports",
+          "quote": "большой выбор казахских песен"
+        },
+        {
+          "key": "retro_repertoire",
+          "polarity": "supports",
+          "quote": "ретро-шлягеров, хитов 80-х, 90-х, 2000-х"
+        },
+        {
+          "key": "modern_repertoire",
+          "polarity": "supports",
+          "quote": "современные хиты"
+        },
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "два вокалиста"
+        },
+        {
+          "key": "saxophone",
+          "polarity": "supports",
+          "quote": "саксофон"
+        }
+      ]
+    },
+    {
+      "id": "HK-31819",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "kazakh_repertoire",
+          "polarity": "supports",
+          "quote": "казахская музыка"
+        },
+        {
+          "key": "retro_repertoire",
+          "polarity": "supports",
+          "quote": "любимые песни 80-х, 90-х, 2000-х"
+        },
+        {
+          "key": "modern_repertoire",
+          "polarity": "supports",
+          "quote": "современные композиции"
+        },
+        {
+          "key": "vocal_music",
+          "polarity": "supports",
+          "quote": "незабываемого вокала солистки"
+        },
+        {
+          "key": "saxophone",
+          "polarity": "supports",
+          "quote": "саксофон"
+        },
+        {
+          "key": "intimate_event_experience",
+          "polarity": "supports",
+          "quote": "в маленьких уютных клубах"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "на больших концертных площадках и open-air’ах"
+        }
+      ]
+    },
+    {
+      "id": "HK-57480",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "live_show",
+          "polarity": "supports",
+          "quote": "яркий перформанс с мощной энергетикой, хореографией и активным взаимодействием с публикой"
+        },
+        {
+          "key": "interactive_program",
+          "polarity": "supports",
+          "quote": "активным взаимодействием с публикой"
+        },
+        {
+          "key": "retro_repertoire",
+          "polarity": "supports",
+          "quote": "от культовых хитов 90-х и 2000-х до современных композиций"
+        },
+        {
+          "key": "modern_repertoire",
+          "polarity": "supports",
+          "quote": "до современных композиций"
+        },
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "яркий перформанс с мощной энергетикой"
+        }
+      ]
+    },
+    {
+      "id": "HK-35215",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "intelligent_humor",
+          "polarity": "supports",
+          "quote": "тонкого юмора"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "конференции и крупные события"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "тимбилдинги, конференции и крупные события"
+        },
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Ведёт все форматы: свадьбы"
+        }
+      ]
+    },
+    {
+      "id": "HK-77838",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "calm_delivery",
+          "polarity": "supports",
+          "quote": "интеллигентной, располагающей и ненавязчивой подачей"
+        },
+        {
+          "key": "improvisation",
+          "polarity": "supports",
+          "quote": "культурная импровизация"
+        },
+        {
+          "key": "intelligent_humor",
+          "polarity": "supports",
+          "quote": "тонкий юмор"
+        }
+      ],
+      "reviewNote": "Ненавязчивая подача не доказывает полный отказ от конкурсов. Языки для фильтра берутся из структурного поля."
+    },
+    {
+      "id": "HK-72938",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "interactive_program",
+          "polarity": "supports",
+          "quote": "Большая база игр и конкурсов"
+        }
+      ],
+      "reviewNote": "Наличие игр не доказывает отказ адаптировать программу; no_contests остается unknown."
+    },
+    {
+      "id": "HK-27222",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "опытом более 12 лет"
+        },
+        {
+          "key": "intelligent_humor",
+          "polarity": "supports",
+          "quote": "тонкий юмор"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "постоянным ведущим масштабных событий"
+        },
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "тёплую, лёгкую и динамичную историю"
+        }
+      ]
+    },
+    {
+      "id": "HK-75012",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "опыт 10 лет в индустрии"
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "технологические форумы"
+        },
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "Стиль, энергия и профессионализм"
+        }
+      ],
+      "reviewNote": "Имена брендов и международные площадки без выполненных зарубежных проектов не доказывают географию выездов."
+    },
+    {
+      "id": "HK-29829",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "no_long_speeches",
+          "polarity": "supports",
+          "quote": "Без долгих речей и наставлений на ивентах."
+        },
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "Только развлечения и танцы."
+        }
+      ],
+      "reviewNote": "Развлечения и танцы не равны обещанию отсутствия конкурсов."
+    },
+    {
+      "id": "HK-35846",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "experience_10_plus",
+          "polarity": "supports",
+          "quote": "Компания на рынке более 15 лет."
+        },
+        {
+          "key": "light_installations",
+          "polarity": "supports",
+          "quote": "Световые и пиксельные шоу"
+        },
+        {
+          "key": "interactive_photo",
+          "polarity": "supports",
+          "quote": "Интерактивные фото/видеозоны"
+        }
+      ]
+    },
+    {
+      "id": "HK-64395",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "mountain_view",
+          "polarity": "supports",
+          "quote": "с захватывающим видом на город и горы"
+        },
+        {
+          "key": "terrace",
+          "polarity": "supports",
+          "quote": "уютные террасы и эффектные закаты"
+        }
+      ],
+      "reviewNote": "Вместимость, сезонность террасы и стоимость на гостя неизвестны."
+    },
+    {
+      "id": "HK-72785",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "mountain_view",
+          "polarity": "supports",
+          "quote": "с панорамными видами на горы и город"
+        },
+        {
+          "key": "quiet_venue",
+          "polarity": "supports",
+          "quote": "атмосферу уединённой роскоши"
+        }
+      ]
+    },
+    {
+      "id": "HK-99701",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "mountain_view",
+          "polarity": "supports",
+          "quote": "с живописными панорамами гор"
+        },
+        {
+          "key": "terrace",
+          "polarity": "supports",
+          "quote": "ужинов на террасе"
+        },
+        {
+          "key": "quiet_venue",
+          "polarity": "supports",
+          "quote": "спокойного отдыха в окружении природы"
+        }
+      ]
+    },
+    {
+      "id": "HK-58236",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "mountain_view",
+          "polarity": "supports",
+          "quote": "с панорамным видом на Алматы и горы"
+        },
+        {
+          "key": "national_cuisine",
+          "polarity": "supports",
+          "quote": "ресторан национальной казахской кухни"
+        }
+      ]
+    },
+    {
+      "id": "HK-50695",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "italian_cuisine",
+          "polarity": "supports",
+          "quote": "ресторан итальянской и средиземноморской кухни"
+        },
+        {
+          "key": "mountain_view",
+          "polarity": "supports",
+          "quote": "красивые виды на горы"
+        },
+        {
+          "key": "terrace",
+          "polarity": "supports",
+          "quote": "уютные террасы"
+        }
+      ]
+    },
+    {
+      "id": "HK-69010",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "mountain_view",
+          "polarity": "supports",
+          "quote": "панорамные виды на горы"
+        },
+        {
+          "key": "terrace",
+          "polarity": "supports",
+          "quote": "отдыха на террасе"
+        },
+        {
+          "key": "quiet_venue",
+          "polarity": "supports",
+          "quote": "спокойную премиальную атмосферу"
+        }
+      ]
+    },
+    {
+      "id": "HK-19103",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "dynamic_delivery",
+          "polarity": "supports",
+          "quote": "энергичная команда джигитов"
+        }
+      ],
+      "reviewNote": "Описание не устанавливает инструменты, язык песен или репертуар."
+    },
+    {
+      "id": "HK-90001",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "seasonal_flowers",
+          "polarity": "supports",
+          "quote": "Работаем с сезонными и привозными цветами"
+        },
+        {
+          "key": "custom_design",
+          "polarity": "supports",
+          "quote": "собираем композиции под цветовую палитру мероприятия"
+        },
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "авторская флористика для свадеб и юбилеев"
+        }
+      ]
+    },
+    {
+      "id": "HK-90002",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "minimalist_decor",
+          "polarity": "supports",
+          "quote": "Предлагаем композиции в разных стилях, от минимализма до пышного декора."
+        },
+        {
+          "key": "corporate_experience",
+          "polarity": "supports",
+          "quote": "флористическое оформление корпоративных и частных событий"
+        }
+      ]
+    },
+    {
+      "id": "HK-90003",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "light_installations",
+          "polarity": "supports",
+          "quote": "световые и объёмные инсталляции"
+        },
+        {
+          "key": "turnkey_decor",
+          "polarity": "supports",
+          "quote": "Работаем под ключ: проект, монтаж, демонтаж."
+        }
+      ]
+    },
+    {
+      "id": "HK-90004",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "custom_design",
+          "polarity": "supports",
+          "quote": "с индивидуальным эскизом под концепцию клиента"
+        },
+        {
+          "key": "large_event_experience",
+          "polarity": "supports",
+          "quote": "сценография и декор больших мероприятий"
+        }
+      ]
+    },
+    {
+      "id": "HK-90005",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "personalized_gifts",
+          "polarity": "supports",
+          "quote": "именные открытки и подарочные наборы для гостей мероприятия"
+        },
+        {
+          "key": "custom_design",
+          "polarity": "supports",
+          "quote": "сладости с индивидуальным дизайном под тематику события"
+        }
+      ]
+    },
+    {
+      "id": "HK-90006",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "branded_merch",
+          "polarity": "supports",
+          "quote": "брендированный мерч и сувениры для корпоративных мероприятий"
+        },
+        {
+          "key": "personalized_gifts",
+          "polarity": "supports",
+          "quote": "фотомагниты, значки, блокноты с логотипом компании"
+        }
+      ]
+    },
+    {
+      "id": "HK-90007",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "personalized_program",
+          "polarity": "supports",
+          "quote": "Работаю по сценарию пары, без шаблонных фраз — каждая церемония собирается индивидуально под историю молодожёнов."
+        },
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Провожу выездную регистрацию и церемонию бракосочетания"
+        }
+      ]
+    },
+    {
+      "id": "HK-90008",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "calm_delivery",
+          "polarity": "supports",
+          "quote": "Спокойная, тёплая подача"
+        },
+        {
+          "key": "wedding_experience",
+          "polarity": "supports",
+          "quote": "Церемониймейстер выездных регистраций брака."
+        }
+      ]
+    },
+    {
+      "id": "HK-90009",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "photo_print",
+          "polarity": "supports",
+          "quote": "с мгновенной печатью снимков"
+        },
+        {
+          "key": "interactive_photo",
+          "polarity": "supports",
+          "quote": "интерактивная фотобудка"
+        }
+      ]
+    },
+    {
+      "id": "HK-90010",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "photo_print",
+          "polarity": "supports",
+          "quote": "зеркальная фотобудка с сенсорным экраном, анимацией и печатью фото"
+        },
+        {
+          "key": "interactive_photo",
+          "polarity": "supports",
+          "quote": "Гости взаимодействуют с зеркалом как с интерактивным гостем праздника."
+        }
+      ]
+    },
+    {
+      "id": "HK-90011",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "capacity_200",
+          "polarity": "supports",
+          "quote": "вместимость зала до 200 гостей"
+        },
+        {
+          "key": "own_catering",
+          "polarity": "supports",
+          "quote": "свой кейтеринг"
+        },
+        {
+          "key": "parking",
+          "polarity": "supports",
+          "quote": "парковка для гостей мероприятия"
+        }
+      ]
+    },
+    {
+      "id": "HK-90012",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "presentation_equipment",
+          "polarity": "supports",
+          "quote": "есть техническое оснащение для презентаций"
+        }
+      ],
+      "reviewNote": "Два зала разной вместимости не дают конкретного числа гостей."
+    },
+    {
+      "id": "HK-90013",
+      "reviewed": true,
+      "features": [
+        {
+          "key": "violin",
+          "polarity": "supports",
+          "quote": "Сольные выступления на скрипке и саксофоне"
+        },
+        {
+          "key": "saxophone",
+          "polarity": "supports",
+          "quote": "Сольные выступления на скрипке и саксофоне"
+        },
+        {
+          "key": "welcome_music",
+          "polarity": "supports",
+          "quote": "welcome-зон корпоративных мероприятий"
+        },
+        {
+          "key": "classical_music",
+          "polarity": "supports",
+          "quote": "Репертуар — от классики до современных кавер-аранжировок."
+        },
+        {
+          "key": "modern_repertoire",
+          "polarity": "supports",
+          "quote": "до современных кавер-аранжировок"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+name: Assistant checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  assistant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            functions/package-lock.json
+            backend/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm --prefix functions ci
+      - run: npm --prefix backend ci
+      - run: node scripts/prepare_assistant_catalog.mjs --check
+      - run: node --test scripts/prepare_assistant_catalog.test.mjs
+      - run: npm --prefix functions test
+      - name: Auth and callable emulator smoke (no external AI)
+        env:
+          ASSISTANT_EXPECT_NO_AI_KEY: 'true'
+          ASSISTANT_STORAGE: memory
+        run: node backend/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --config firebase.assistant.json --project demo-event-match-assistant --only auth,firestore,functions "node scripts/smoke_assistant.mjs && node scripts/smoke_assistant_storage.mjs"

@@ -1,0 +1,13 @@
+{
+  "functions": [{ "source": "functions", "codebase": "assistant" }],
+  "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
+  "emulators": {
+    "auth": { "port": 9199 },
+    "functions": { "port": 5002 },
+    "firestore": { "port": 8180 },
+    "hub": { "port": 4440 },
+    "logging": { "port": 4540 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}

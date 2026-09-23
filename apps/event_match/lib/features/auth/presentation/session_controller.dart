@@ -173,6 +173,7 @@ String safeReturnTarget(String? raw) {
   }
   if (uri.path == '/' ||
       uri.path == '/demo' ||
+      uri.path == '/assistant' ||
       uri.path == '/settings' ||
       uri.path.startsWith('/client/') ||
       uri.path.startsWith('/contractor/') ||
@@ -189,7 +190,7 @@ String safeReturnTarget(String? raw) {
 
 String? sessionRedirect(SessionController session, Uri uri) {
   final path = uri.path;
-  final public = path == '/' || path == '/demo';
+  final public = path == '/' || path == '/demo' || path == '/assistant';
   if (public) return null;
   final target = safeReturnTarget(uri.queryParameters['returnTo']);
   String carry(String route, String destination) =>

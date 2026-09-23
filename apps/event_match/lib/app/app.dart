@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
+import '../features/assistant/presentation/assistant_host.dart';
 import '../features/auth/presentation/auth_pages.dart';
 import '../features/auth/presentation/session_controller.dart';
 import '../features/auth/presentation/settings_page.dart';
 import '../features/matching/data/catalog_repository.dart';
 import '../features/matching/presentation/matching_screen.dart';
 import '../features/matching/domain/recommendation_service.dart';
+import '../features/matching/domain/models.dart';
 import '../features/planning/data/firestore_event_plan_repository.dart';
 import '../features/planning/domain/event_plan_repository.dart';
 import '../features/planning/presentation/event_plan_page.dart';
@@ -44,6 +46,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
   GoRouter? _router;
   EventPlanRepository? _plans;
   final CatalogRepository _demoRepository = AssetCatalogRepository();
+  AssistantSession? _assistantSession;
   @override
   void initState() {
     super.initState();
@@ -107,6 +110,25 @@ class _EventMatchAppState extends State<EventMatchApp> {
             child: MatchingScreen(
               repository: _demoRepository,
               service: widget.recommendationService,
+              onOpenAssistant: (request) =>
+                  context.go('/assistant', extra: request),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/assistant',
+          builder: (context, state) => _PublicFrame(
+            session: session,
+            selected: '/assistant',
+            child: AssistantHost(
+              repository: _demoRepository,
+              session: _assistantSession ??= AssistantSession(
+                repository: _demoRepository,
+              ),
+              initialRequest: state.extra is MatchRequest
+                  ? state.extra as MatchRequest
+                  : null,
+              onOpenCatalog: () => context.go('/demo'),
             ),
           ),
         ),
@@ -217,6 +239,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
   @override
   void dispose() {
     _router?.dispose();
+    _assistantSession?.dispose();
     super.dispose();
   }
 
@@ -285,6 +308,10 @@ class _PublicFrame extends StatelessWidget {
                   TextButton(
                     onPressed: () => context.go('/demo'),
                     child: const Text('Демо-каталог'),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/assistant'),
+                    child: const Text('Помощник · демо'),
                   ),
                   FilledButton.tonal(
                     onPressed: () => context.go(

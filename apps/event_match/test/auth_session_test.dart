@@ -128,6 +128,7 @@ void main() {
         '/auth?returnTo=%2Fclient%2Ffavorites',
       );
       expect(sessionRedirect(session, Uri.parse('/')), isNull);
+      expect(sessionRedirect(session, Uri.parse('/assistant')), isNull);
     },
   );
   test(
