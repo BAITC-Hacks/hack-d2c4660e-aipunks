@@ -3,6 +3,7 @@ import '../data/catalog_repository.dart';
 import '../data/local_recommendation_service.dart';
 import '../domain/models.dart';
 import '../domain/recommendation_service.dart';
+import '../domain/alternative_dates.dart';
 
 enum SearchStatus { idle, searching, success, failure }
 
@@ -14,6 +15,7 @@ class MatchingController extends ChangeNotifier {
   List<Contractor> catalog = [];
   MatchResult? result;
   MatchRequest? lastRequest;
+  List<AlternativeDate> dateOptions = const [];
   SearchStatus status = SearchStatus.idle;
   bool loading = false;
   String? error;
@@ -42,9 +44,12 @@ class MatchingController extends ChangeNotifier {
     status = SearchStatus.searching;
     searchError = null;
     result = null;
+    dateOptions = const [];
     notifyListeners();
     try {
       request.validate();
+      dateOptions = alternativeDates(catalog, request);
+      notifyListeners();
       final response = await service
           .recommend(request)
           .timeout(const Duration(seconds: 10));
@@ -65,6 +70,7 @@ class MatchingController extends ChangeNotifier {
     ++_generation; // A late response must not overwrite edited order parameters.
     result = null;
     lastRequest = null;
+    dateOptions = const [];
     searchError = null;
     status = SearchStatus.idle;
     notifyListeners();

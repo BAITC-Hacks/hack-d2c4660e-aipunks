@@ -37,6 +37,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('open-filters')));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('apply-filters')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('apply-filters')));
       await tester.pumpAndSettle();
       expect(find.text('Ваша подборка'), findsOneWidget);

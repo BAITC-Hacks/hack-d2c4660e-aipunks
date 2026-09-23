@@ -5,6 +5,8 @@ abstract final class AppTheme {
   static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
+      fontFamily: 'Manrope',
+      fontFamilyFallback: const ['NotoSans'],
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
@@ -45,7 +47,7 @@ abstract final class AppTheme {
               color: AppColors.ink,
             ),
           )
-          .apply(fontFamily: 'Roboto'),
+          .apply(fontFamily: 'Manrope', fontFamilyFallback: const ['NotoSans']),
       cardTheme: const CardThemeData(
         color: AppColors.white,
         surfaceTintColor: Colors.transparent,
@@ -66,6 +68,7 @@ abstract final class AppTheme {
           horizontal: 16,
           vertical: 18,
         ),
+        hintStyle: const TextStyle(color: AppColors.muted, fontSize: 14),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -81,7 +84,7 @@ abstract final class AppTheme {
           minimumSize: const Size(48, 52),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),
@@ -97,8 +100,22 @@ abstract final class AppTheme {
         side: const BorderSide(color: AppColors.border),
         backgroundColor: AppColors.white,
         selectedColor: AppColors.lavender,
+        showCheckmark: false,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          foregroundColor: AppColors.primary,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: AppColors.canvas,
+        surfaceTintColor: Colors.transparent,
       ),
     );
   }

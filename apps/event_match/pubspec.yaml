@@ -42,6 +42,7 @@ dependencies:
   firebase_core: ^4.15.0
   crypto: ^3.0.7
   http: ^1.6.0
+  shared_preferences: ^2.5.5
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -66,6 +67,18 @@ flutter:
   assets:
     - assets/data/demo.jsonl
     - assets/data/catalog.jsonl
+    - assets/images/event-table.jpg
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+    - family: CormorantGaramond
+      fonts:
+        - asset: assets/fonts/CormorantGaramond-Italic.ttf
+          style: italic
 
   # To add assets to your application, add an assets section, like this:
   # assets:

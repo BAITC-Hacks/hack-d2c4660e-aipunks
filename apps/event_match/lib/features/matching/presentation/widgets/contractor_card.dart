@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 import '../../../../app/design_tokens.dart';
 import 'ai_explanation.dart';
+import 'contractor_details.dart';
 
 String money(int value) => value.toString().replaceAllMapped(
   RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
@@ -32,15 +33,23 @@ class ContractorCard extends StatelessWidget {
     this.explanation,
     this.rank,
     this.recommendation,
+    this.isFavorite = false,
+    this.onFavorite,
+    this.favoriteTooltip,
     this.aiSummary,
     this.summaryPending = false,
+    this.stretchHeight = false,
   });
   final Contractor contractor;
   final String? explanation;
   final int? rank;
   final Recommendation? recommendation;
+  final bool isFavorite;
+  final VoidCallback? onFavorite;
+  final String? favoriteTooltip;
   final String? aiSummary;
   final bool summaryPending;
+  final bool stretchHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -58,46 +67,28 @@ class ContractorCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            color: AppColors.categorySurface(c.categories.first),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ExcludeSemantics(
-                  child: CircleAvatar(
-                    radius: 34,
-                    backgroundColor: colors.surface,
-                    child: Icon(
-                      categoryIcon(c.categories.first),
-                      color: colors.primary,
-                      size: 32,
+          _CategoryHeader(
+            contractor: c,
+            rank: rank,
+            trailing: onFavorite != null || isFavorite
+                ? IconButton(
+                    key: ValueKey('favorite-${c.id}'),
+                    tooltip:
+                        favoriteTooltip ??
+                        (isFavorite
+                            ? 'Сохранено в избранном'
+                            : 'Сохранить в избранное'),
+                    isSelected: isFavorite,
+                    onPressed: onFavorite,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      backgroundColor: colors.surface,
+                      foregroundColor: colors.primary,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.categories.join(' · '),
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: colors.onPrimaryContainer,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        rank == null
-                            ? c.city
-                            : 'Рекомендация №$rank · ${c.city}',
-                        style: TextStyle(color: colors.onPrimaryContainer),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+                    icon: const Icon(Icons.favorite_border),
+                    selectedIcon: const Icon(Icons.favorite),
+                  )
+                : null,
           ),
           Padding(
             padding: const EdgeInsets.all(20),
@@ -107,7 +98,8 @@ class ContractorCard extends StatelessWidget {
                 Text(
                   c.name,
                   style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.6,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -157,65 +149,36 @@ class ContractorCard extends StatelessWidget {
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
-                ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  title: const Text('Подробнее о подрядчике'),
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Все форматы: ${c.formats.join(', ')}'),
-                            const SizedBox(height: 12),
-                            SelectableText(c.description),
-                            if (recommendation != null) ...[
-                              const SizedBox(height: 12),
-                              Text(
-                                'Оценка соответствия: ${recommendation!.score.toStringAsFixed(3)} (не рейтинг качества)',
-                              ),
-                              for (final entry
-                                  in recommendation!.features.entries)
-                                Text(
-                                  '${featureLabels[entry.key] ?? entry.key}: ${entry.value.toStringAsFixed(3)}',
-                                ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (recommendation != null && recommendation!.source != 'llm')
-                  Text(
-                    'Текст: локальные факты',
-                    style: theme.textTheme.labelMedium,
-                  ),
-                if (recommendation?.equivalent ?? false)
-                  const Text(
-                    'В данных недостаточно отличий — не считаем этот вариант уникально лучшим.',
-                  ),
+              ],
+            ),
+          ),
+          if (stretchHeight) const Spacer(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Text(
                   c.synthetic
-                      ? (c.id.startsWith('DEMO-')
-                            ? 'Демонстрационный профиль · добавлен нами'
-                            : 'Синтетический профиль организаторов')
+                      ? 'Демонстрационный профиль'
                       : 'Анонимизированный профиль',
                   style: theme.textTheme.labelMedium,
                 ),
-                if (c.priceImputed)
-                  Text(
-                    'Цена заполнена при подготовке датасета',
-                    style: theme.textTheme.bodySmall,
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: ValueKey('profile-${c.id}'),
+                  onPressed: () => showContractorDetails(
+                    context,
+                    contractor: c,
+                    explanation: explanation ?? aiSummary,
+                    generated:
+                        recommendation?.source == 'llm' ||
+                        (recommendation == null && aiSummary != null),
+                    recommendation: recommendation,
                   ),
-                if (c.cityImputed)
-                  Text(
-                    'Город заполнен при подготовке датасета',
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  icon: const Icon(Icons.arrow_outward, size: 18),
+                  label: const Text('Посмотреть профиль'),
+                ),
               ],
             ),
           ),
@@ -223,4 +186,172 @@ class ContractorCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CategoryHeader extends StatelessWidget {
+  const _CategoryHeader({
+    required this.contractor,
+    required this.rank,
+    this.trailing,
+  });
+
+  final Contractor contractor;
+  final int? rank;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final c = contractor;
+    final showSymbol = MediaQuery.textScalerOf(context).scale(16) <= 24;
+    return Container(
+      color: AppColors.categorySurface(c.categories.first),
+      constraints: const BoxConstraints(minHeight: 136),
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: ExcludeSemantics(
+              child: CustomPaint(painter: _CategoryBackdrop()),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: .82),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ExcludeSemantics(
+                              child: Icon(
+                                categoryIcon(c.categories.first),
+                                size: 15,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                c.categories.join(' · '),
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ExcludeSemantics(
+                            child: Icon(
+                              Icons.place_outlined,
+                              size: 16,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              rank == null
+                                  ? c.city
+                                  : 'Рекомендация №$rank · ${c.city}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                                fontWeight: FontWeight.w500,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (trailing != null)
+                  trailing!
+                else if (showSymbol) ...[
+                  const SizedBox(width: 14),
+                  ExcludeSemantics(
+                    child: Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: .72),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: AppColors.white.withValues(alpha: .8),
+                        ),
+                      ),
+                      child: Icon(
+                        categoryIcon(c.categories.first),
+                        size: 32,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryBackdrop extends CustomPainter {
+  const _CategoryBackdrop();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = AppColors.white.withValues(alpha: .34);
+    final shape = Path()
+      ..moveTo(size.width * .7, 0)
+      ..cubicTo(
+        size.width * .58,
+        size.height * .32,
+        size.width * .94,
+        size.height * .53,
+        size.width * .74,
+        size.height,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(shape, paint);
+    paint
+      ..color = AppColors.white.withValues(alpha: .66)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawCircle(Offset(size.width - 44, size.height + 8), 49, paint);
+    canvas.drawCircle(Offset(size.width - 44, size.height + 8), 64, paint);
+    paint
+      ..style = PaintingStyle.fill
+      ..color = AppColors.white.withValues(alpha: .75);
+    canvas.drawCircle(Offset(size.width * .57, 21), 3, paint);
+    canvas.drawCircle(Offset(size.width * .64, size.height - 22), 2, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CategoryBackdrop oldDelegate) => false;
 }

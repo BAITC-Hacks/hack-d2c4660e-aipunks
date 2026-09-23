@@ -89,5 +89,6 @@ npm test
 - [Архитектура и границы доверия](docs/architecture.md)
 - [Локальный сервер, SQLite, GPT и телефон](docs/local-backend.md)
 - [Развитие и ограничения](docs/development.md)
+- [Избранное по папкам и альтернативные даты](docs/favorites-and-dates.md)
 - [Дизайн-система](design-system/event-match/MASTER.md)
 - [Архив прежней настройки Firebase](docs/firebase.md)
