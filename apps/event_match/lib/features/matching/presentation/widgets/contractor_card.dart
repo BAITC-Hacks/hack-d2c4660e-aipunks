@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 import '../../../../app/design_tokens.dart';
+import 'ai_explanation.dart';
 
 String money(int value) => value.toString().replaceAllMapped(
   RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
   (m) => '${m[1]} ',
 );
+
+const featureLabels = {
+  'budget': 'Бюджет',
+  'focus': 'Фокус форматов',
+  'description': 'Совпадения описания',
+  'language': 'Языки',
+  'hours': 'Запас часов',
+  'provenance': 'Множитель происхождения данных',
+};
 
 IconData categoryIcon(String category) => switch (category) {
   'Ведущий' || 'Ведущий церемонии' => Icons.mic_none_outlined,
@@ -21,10 +31,16 @@ class ContractorCard extends StatelessWidget {
     required this.contractor,
     this.explanation,
     this.rank,
+    this.recommendation,
+    this.aiSummary,
+    this.summaryPending = false,
   });
   final Contractor contractor;
   final String? explanation;
   final int? rank;
+  final Recommendation? recommendation;
+  final String? aiSummary;
+  final bool summaryPending;
 
   @override
   Widget build(BuildContext context) {
@@ -120,30 +136,12 @@ class ContractorCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 16),
-                if (explanation != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colors.secondaryContainer,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Почему подходит',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: colors.onSecondaryContainer,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          explanation!,
-                          style: TextStyle(color: colors.onSecondaryContainer),
-                        ),
-                      ],
-                    ),
+                if (explanation != null || aiSummary != null)
+                  AiExplanation(
+                    text: explanation ?? aiSummary!,
+                    generated:
+                        recommendation?.source == 'llm' ||
+                        (recommendation == null && aiSummary != null),
                   )
                 else
                   Text(
@@ -152,6 +150,13 @@ class ContractorCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium,
                   ),
+                if (summaryPending && aiSummary == null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Готовим краткое объяснение…',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
                   title: const Text('Подробнее о подрядчике'),
@@ -166,6 +171,17 @@ class ContractorCard extends StatelessWidget {
                             Text('Все форматы: ${c.formats.join(', ')}'),
                             const SizedBox(height: 12),
                             SelectableText(c.description),
+                            if (recommendation != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                'Оценка соответствия: ${recommendation!.score.toStringAsFixed(3)} (не рейтинг качества)',
+                              ),
+                              for (final entry
+                                  in recommendation!.features.entries)
+                                Text(
+                                  '${featureLabels[entry.key] ?? entry.key}: ${entry.value.toStringAsFixed(3)}',
+                                ),
+                            ],
                           ],
                         ),
                       ),
@@ -173,9 +189,20 @@ class ContractorCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (recommendation != null && recommendation!.source != 'llm')
+                  Text(
+                    'Текст: локальные факты',
+                    style: theme.textTheme.labelMedium,
+                  ),
+                if (recommendation?.equivalent ?? false)
+                  const Text(
+                    'В данных недостаточно отличий — не считаем этот вариант уникально лучшим.',
+                  ),
                 Text(
                   c.synthetic
-                      ? 'Синтетический профиль организаторов'
+                      ? (c.id.startsWith('DEMO-')
+                            ? 'Демонстрационный профиль · добавлен нами'
+                            : 'Синтетический профиль организаторов')
                       : 'Анонимизированный профиль',
                   style: theme.textTheme.labelMedium,
                 ),

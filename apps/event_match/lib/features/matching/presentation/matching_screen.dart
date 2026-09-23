@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/catalog_repository.dart';
+import '../data/api_recommendation_service.dart';
 import '../domain/models.dart';
 import '../domain/recommendation_service.dart';
 import 'matching_controller.dart';
@@ -23,6 +24,42 @@ class _MatchingScreenState extends State<MatchingScreen> {
   String browseCategory = 'Все';
   final searchInput = TextEditingController();
   final pageScroll = ScrollController();
+  final summaries = <String, String>{};
+  final summaryAttempts = <String>{};
+  bool summaryBusy = false;
+  bool summaryFailed = false;
+  bool get aiEnabled =>
+      controller.service is ApiRecommendationService &&
+      (controller.service as ApiRecommendationService).aiEnabled;
+
+  Future<void> loadNextSummaries() async {
+    if (!mounted ||
+        !aiEnabled ||
+        summaryBusy ||
+        summaryFailed ||
+        controller.result != null ||
+        controller.status == SearchStatus.searching) {
+      return;
+    }
+    final batch = browsed
+        .take(visibleCount)
+        .where((c) => !summaryAttempts.contains(c.id))
+        .take(3)
+        .toList();
+    if (batch.isEmpty) return;
+    setState(() {
+      summaryBusy = true;
+      summaryAttempts.addAll(batch.map((c) => c.id));
+    });
+    final texts = await (controller.service as ApiRecommendationService)
+        .summarize(batch, controller.catalog);
+    if (!mounted) return;
+    setState(() {
+      summaries.addAll(texts);
+      summaryBusy = false;
+      summaryFailed = batch.any((c) => !texts.containsKey(c.id));
+    });
+  }
 
   List<Contractor> get browsed => controller.catalog
       .where(
@@ -212,9 +249,9 @@ class _MatchingScreenState extends State<MatchingScreen> {
       final largeText = MediaQuery.textScalerOf(context).scale(16) > 24;
       final columns = largeText
           ? 1
-          : constraints.maxWidth >= 1120
+          : constraints.maxWidth >= 1320
           ? 3
-          : constraints.maxWidth >= 700
+          : constraints.maxWidth >= 840
           ? 2
           : 1;
       final width = (constraints.maxWidth - (columns - 1) * 20) / columns;
@@ -230,6 +267,15 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 contractor: profiles[i],
                 explanation: recommendations?[i].explanation,
                 rank: recommendations == null ? null : i + 1,
+                recommendation: recommendations?[i],
+                aiSummary: recommendations == null && aiEnabled
+                    ? summaries[profiles[i].id]
+                    : null,
+                summaryPending:
+                    recommendations == null &&
+                    aiEnabled &&
+                    !summaryFailed &&
+                    !summaries.containsKey(profiles[i].id),
               ),
             ),
         ],
@@ -298,6 +344,45 @@ class _MatchingScreenState extends State<MatchingScreen> {
             result.recommendations.map((r) => r.contractor).toList(),
             recommendations: result.recommendations,
           ),
+          if (result.notice.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(result.notice),
+            ),
+          if (result.relaxations.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Text(
+              'Можно изменить одно условие',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var i = 0; i < result.relaxations.length; i++)
+                  OutlinedButton(
+                    key: ValueKey('relaxation-$i'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: () {
+                      if (pageScroll.hasClients) pageScroll.jumpTo(0);
+                      controller.search(result.relaxations[i].request);
+                    },
+                    child: Text(result.relaxations[i].label),
+                  ),
+              ],
+            ),
+          ],
+          if (result.catalogVersion.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                'Каталог ${result.catalogVersion.substring(0, 12)} · ${result.algorithmVersion}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
         ],
       );
     }
@@ -316,6 +401,22 @@ class _MatchingScreenState extends State<MatchingScreen> {
             'Попробуйте другое имя, город или категорию.',
           ),
         cardList(browsed.take(visibleCount).toList()),
+        if (summaryFailed && aiEnabled) ...[
+          const SizedBox(height: 16),
+          const Text(
+            'Часть AI-сводок недоступна. Показаны исходные описания из каталога.',
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() {
+                summaryFailed = false;
+                summaryAttempts.removeWhere((id) => !summaries.containsKey(id));
+              }),
+              child: const Text('Повторить загрузку объяснений'),
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         Center(
           child: Text(
@@ -364,16 +465,19 @@ class _MatchingScreenState extends State<MatchingScreen> {
               listenable: controller,
               builder: (context, _) {
                 final request = controller.lastRequest;
+                WidgetsBinding.instance.addPostFrameCallback(
+                  (_) => loadNextSummaries(),
+                );
                 return CustomScrollView(
                   controller: pageScroll,
                   slivers: [
                     SliverToBoxAdapter(
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1280),
+                          constraints: const BoxConstraints(maxWidth: 1760),
                           child: Padding(
                             padding: EdgeInsets.all(
-                              MediaQuery.sizeOf(context).width < 600 ? 16 : 32,
+                              MediaQuery.sizeOf(context).width < 600 ? 16 : 24,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -390,6 +494,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                   ),
                                 const SizedBox(height: 32),
                                 Wrap(
+                                  // Native controls keep keyboard and touch semantics.
                                   alignment: WrapAlignment.spaceBetween,
                                   crossAxisAlignment: WrapCrossAlignment.center,
                                   spacing: 16,
@@ -420,6 +525,38 @@ class _MatchingScreenState extends State<MatchingScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
+                                if (controller.service
+                                    is ApiRecommendationService)
+                                  SwitchListTile.adaptive(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: const Text('Объяснения от ИИ'),
+                                    subtitle: const Text(
+                                      'Не меняет состав и порядок; без сети работают локальные объяснения',
+                                    ),
+                                    value:
+                                        (controller.service
+                                                as ApiRecommendationService)
+                                            .aiEnabled,
+                                    onChanged:
+                                        controller.status ==
+                                            SearchStatus.searching
+                                        ? null
+                                        : (value) {
+                                            setState(
+                                              () =>
+                                                  (controller.service
+                                                              as ApiRecommendationService)
+                                                          .aiEnabled =
+                                                      value,
+                                            );
+                                            if (controller.lastRequest !=
+                                                null) {
+                                              controller.search(
+                                                controller.lastRequest!,
+                                              );
+                                            }
+                                          },
+                                  ),
                                 if (request == null) ...[
                                   TextField(
                                     key: const Key('catalog-search'),

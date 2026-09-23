@@ -224,6 +224,13 @@ class _OrderFiltersState extends State<OrderFilters> {
                             'Текстовые пожелания пока не учитываются в подборе.',
                           ),
                         ),
+                      if (widget.supportsPreferences)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            'Пожелания сопоставляются со словами описания; это не проверка всех смысловых требований.',
+                          ),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),

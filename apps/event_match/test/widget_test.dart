@@ -40,7 +40,9 @@ void main() {
       await tester.tap(find.byKey(const Key('apply-filters')));
       await tester.pumpAndSettle();
       expect(find.text('Ваша подборка'), findsOneWidget);
-      expect(find.text('Сон Гоку'), findsOneWidget);
+      for (var rank = 1; rank <= 3; rank++) {
+        expect(find.text('Рекомендация №$rank · Алматы'), findsOneWidget);
+      }
       expect(find.byKey(const Key('budget-input')), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -92,7 +94,7 @@ void main() {
       expect(find.text('до 1 000 000 ₸'), findsOneWidget);
       await tester.tap(find.byKey(const Key('reset-filters')));
       await tester.pumpAndSettle();
-      expect(find.text('Каталог · 66 профилей'), findsOneWidget);
+      expect(find.text('Каталог · 500 профилей'), findsOneWidget);
       expect(find.text('Тони Тони Чоппер'), findsOneWidget);
     },
   );
@@ -121,4 +123,31 @@ void main() {
     expect(find.text('Буллма'), findsNothing);
     expect(find.text('Тони Тони Чоппер'), findsOneWidget);
   });
+  testWidgets(
+    'relaxation applies one new request and updates visible conditions',
+    (tester) async {
+      tester.view.physicalSize = const Size(375, 812);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(EventMatchApp(repository: repository));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('open-filters')));
+      await tester.tap(find.byKey(const Key('open-filters')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('budget-input')));
+      await tester.enterText(find.byKey(const Key('budget-input')), '1');
+      await tester.tap(find.byKey(const Key('apply-filters')));
+      await tester.pumpAndSettle();
+      expect(find.text('Нет подходящих кандидатов'), findsOneWidget);
+      final suggestion = find.byKey(const ValueKey('relaxation-0'));
+      await tester.ensureVisible(suggestion);
+      await tester.pumpAndSettle();
+      await tester.tap(suggestion);
+      await tester.pumpAndSettle();
+      expect(find.text('Ваша подборка'), findsOneWidget);
+      expect(find.text('до 1 ₸'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

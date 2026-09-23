@@ -10,3 +10,7 @@ ui-debug.log*
 !.env.example
 .secret.local
 **/node_modules/
+apps/api/data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm

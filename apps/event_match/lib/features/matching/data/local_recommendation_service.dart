@@ -9,7 +9,7 @@ class LocalRecommendationService implements RecommendationService {
   final engine = const MatchingEngine();
 
   @override
-  bool get supportsPreferences => false;
+  bool get supportsPreferences => true;
 
   @override
   Future<MatchResult> recommend(MatchRequest request) async {

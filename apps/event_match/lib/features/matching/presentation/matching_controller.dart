@@ -38,7 +38,7 @@ class MatchingController extends ChangeNotifier {
 
   Future<void> search(MatchRequest request) async {
     final generation = ++_generation;
-    lastRequest = request;
+    lastRequest = request.normalized();
     status = SearchStatus.searching;
     searchError = null;
     result = null;

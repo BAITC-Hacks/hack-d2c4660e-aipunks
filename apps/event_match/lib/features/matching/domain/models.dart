@@ -1,3 +1,5 @@
+import 'normalization.dart';
+
 String dateKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -22,6 +24,24 @@ class Contractor {
   final int price;
   final double? maxHours;
   final bool synthetic, cityImputed, priceImputed;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'anon_name': name,
+    'city': city,
+    'categories': categories,
+    'price_from_kzt': price,
+    'event_formats': formats,
+    'languages': languages,
+    'busy_dates': busyDates,
+    'description': description,
+    'max_hours': maxHours == maxHours?.roundToDouble()
+        ? maxHours?.toInt()
+        : maxHours,
+    'synthetic': synthetic,
+    'city_imputed': cityImputed,
+    'price_imputed': priceImputed,
+  };
 
   factory Contractor.fromJson(Map<String, dynamic> j) => Contractor(
     id: j['id'].toString(),
@@ -58,6 +78,33 @@ class MatchRequest {
   final String? language;
   final String preferences;
 
+  MatchRequest copyWith({
+    String? city,
+    DateTime? date,
+    String? format,
+    String? category,
+    int? budget,
+    double? hours,
+    bool clearLanguage = false,
+    String? language,
+  }) => MatchRequest(
+    city: city ?? this.city,
+    date: date ?? this.date,
+    format: format ?? this.format,
+    category: category ?? this.category,
+    budget: budget ?? this.budget,
+    hours: hours ?? this.hours,
+    language: clearLanguage ? null : language ?? this.language,
+    preferences: preferences,
+  );
+
+  MatchRequest normalized() => copyWith(
+    city: displayValue('city', city),
+    format: displayValue('format', format),
+    category: displayValue('category', category),
+    language: language == null ? null : displayValue('language', language!),
+  );
+
   /// Shared boundary for forms, future natural-language input and API clients.
   Map<String, Object?> toJson() => {
     'city': city,
@@ -93,14 +140,86 @@ class MatchRequest {
 enum MatchOutcome { matched, categoryAbsent, noEligible }
 
 class Recommendation {
-  const Recommendation(this.contractor, this.explanation);
+  const Recommendation(
+    this.contractor,
+    this.explanation, {
+    this.score = 0,
+    this.features = const {},
+    this.mainFact = '',
+    this.fitFact = '',
+    this.source = 'template',
+    this.equivalent = false,
+  });
   final Contractor contractor;
   final String explanation;
+  final double score;
+  final Map<String, double> features;
+  final String mainFact, fitFact, source;
+  final bool equivalent;
+
+  Recommendation withText(String text, String source) => Recommendation(
+    contractor,
+    text,
+    score: score,
+    features: features,
+    mainFact: mainFact,
+    fitFact: fitFact,
+    source: source,
+    equivalent: equivalent,
+  );
+}
+
+enum Violation { format, language, hours, busy, budget }
+
+class Evaluation {
+  const Evaluation(this.contractor, this.violations);
+  final Contractor contractor;
+  final Set<Violation> violations;
+  bool get passed => violations.isEmpty;
+  Violation? get primary =>
+      passed ? null : Violation.values.firstWhere(violations.contains);
+}
+
+class Relaxation {
+  const Relaxation(
+    this.field,
+    this.label,
+    this.request,
+    this.count,
+    this.added,
+  );
+  final String field, label;
+  final MatchRequest request;
+  final int count, added;
 }
 
 class MatchResult {
-  const MatchResult(this.outcome, this.recommendations, this.summary);
+  const MatchResult(
+    this.outcome,
+    this.recommendations,
+    this.summary, {
+    this.evaluations = const [],
+    this.relaxations = const [],
+    this.catalogVersion = '',
+    this.algorithmVersion = 'contrast-v2',
+    this.notice = '',
+  });
   final MatchOutcome outcome;
   final List<Recommendation> recommendations;
   final String summary;
+  final List<Evaluation> evaluations;
+  final List<Relaxation> relaxations;
+  final String catalogVersion, algorithmVersion, notice;
+
+  MatchResult withExplanations(List<Recommendation> cards, String notice) =>
+      MatchResult(
+        outcome,
+        cards,
+        summary,
+        evaluations: evaluations,
+        relaxations: relaxations,
+        catalogVersion: catalogVersion,
+        algorithmVersion: algorithmVersion,
+        notice: notice,
+      );
 }

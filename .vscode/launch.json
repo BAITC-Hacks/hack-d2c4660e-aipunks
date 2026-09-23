@@ -7,7 +7,8 @@
       "type": "dart",
       "cwd": "${workspaceFolder}/apps/event_match",
       "program": "lib/main.dart",
-      "deviceId": "chrome"
+      "deviceId": "chrome",
+      "toolArgs": ["--web-port=5173"]
     },
     {
       "name": "Event Match · Phone (select device)",
