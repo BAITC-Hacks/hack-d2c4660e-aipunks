@@ -53,6 +53,12 @@ function refinementActions(brief: Brief): Action[] {
 }
 
 export function buildTurn(catalog: Catalog, brief: Brief, options: DialogueOptions): AssistantTurn {
+  if (catalog.source === "live" && catalog.contractors.length === 0) {
+    const result = hasSearchMinimum(brief) ? recommend(catalog, brief, options.semanticScores) : null;
+    return { brief, message: "В живом каталоге пока нет опубликованных подрядчиков. Условия сохранены — можно вернуться к подбору после появления профилей.",
+      actions: [], question_field: null, result, mode: options.mode, warnings: options.warnings ?? [],
+      dataset_version: catalog.datasetVersion, algorithm_version: ALGORITHM_VERSION };
+  }
   let result: Result | null = hasSearchMinimum(brief)
     ? recommend(catalog, brief, options.semanticScores) : null;
   let questionField: string | null = null;

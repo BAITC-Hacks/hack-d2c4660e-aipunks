@@ -12,6 +12,9 @@ export interface Contractor {
   synthetic: boolean;
   city_imputed: boolean;
   price_imputed: boolean;
+  is_live?: boolean;
+  contact?: string;
+  portfolio_urls?: string[];
 }
 
 export interface Preference {
@@ -44,7 +47,7 @@ export interface Action {
   value?: unknown;
 }
 export interface HistoryEntry { role: "user" | "assistant"; text: string }
-export interface AssistantInput { brief: Brief; message?: string; action?: Action; history?: HistoryEntry[] }
+export interface AssistantInput { brief: Brief; message?: string; action?: Action; history?: HistoryEntry[]; source?: "live" | "demo" }
 export interface Evidence {
   feature_id: string;
   quote: string;
@@ -76,12 +79,20 @@ export interface AssistantTurn {
 }
 export interface FeatureDefinition { key: string; label: string; description: string }
 export interface ProfileFeature { key: string; polarity: "supports" | "contradicts"; quote: string }
+export type Availability = "available" | "busy" | "unconfirmed";
+export interface LiveDatePolicy { firstDate: string; lastDate: string }
 export interface Catalog {
   contractors: Contractor[];
   datasetVersion: string;
   featureVersion: string;
   featureDefinitions: FeatureDefinition[];
   features: ReadonlyMap<string, ProfileFeature[]>;
+  source?: "live" | "demo";
+  liveDatePolicy?: LiveDatePolicy;
+  profileVersions?: ReadonlyMap<string, string>;
+  availabilityDate?: string;
+  availability?: ReadonlyMap<string, Availability>;
+  resolveAvailability?: (date: string) => Promise<Map<string, Availability>>;
 }
 export const ALGORITHM_VERSION = "assistant-v1.0.0";
 export const CALENDAR_START = "2026-09-23";

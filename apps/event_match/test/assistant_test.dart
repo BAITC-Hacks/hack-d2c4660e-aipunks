@@ -4,8 +4,11 @@ import 'package:event_match/features/assistant/data/basic_assistant_service.dart
 import 'package:event_match/features/assistant/domain/assistant_models.dart';
 import 'package:event_match/features/assistant/domain/assistant_service.dart';
 import 'package:event_match/features/assistant/presentation/assistant_controller.dart';
+import 'package:event_match/features/assistant/presentation/assistant_host.dart';
 import 'package:event_match/features/matching/data/catalog_repository.dart';
 import 'package:event_match/features/matching/domain/models.dart';
+import 'package:event_match/features/workspace/domain/workspace_models.dart'
+    show CalendarMonth;
 
 class _Catalog implements CatalogRepository {
   _Catalog(this.profiles);
@@ -67,6 +70,240 @@ void main() {
     expect(b.date, isNull);
     expect(b.budgetKzt, isNull);
   });
+
+  test(
+    'confirmed live request uses its own date policy, retaining demo default',
+    () {
+      final policy = MatchDatePolicy.live(DateTime.utc(2027, 1, 10));
+      final brief = initial
+          .withField('date', '2027-02-14')
+          .withField('budget_kzt', 300000);
+      expect(() => brief.toMatchRequest(), throwsStateError);
+      expect(
+        dateKey(brief.toMatchRequest(datePolicy: policy).date),
+        '2027-02-14',
+      );
+      expect(
+        () => brief
+            .withField('date', '2028-02-14')
+            .toMatchRequest(datePolicy: policy),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'live fallback requires fresh matching calendars and rereads them every turn',
+    () async {
+      final now = DateTime.utc(2027, 1, 10, 10);
+      const ids = [
+        'available',
+        'busy',
+        'missing',
+        'stale',
+        'future',
+        'owner',
+        'month',
+        'offline',
+      ];
+      final liveCatalog = _Catalog([
+        for (final id in ids)
+          Contractor(
+            id: id,
+            name: id,
+            city: 'Алматы',
+            categories: const ['Ведущий'],
+            price: 100000,
+            formats: const ['свадьба'],
+            languages: const ['русский'],
+            busyDates: const [],
+            description: 'Профиль',
+            isLive: true,
+          ),
+      ]);
+      final reads = <String>[];
+      var availableBecomesBusy = false;
+      final live = BasicAssistantService(
+        liveCatalog,
+        datePolicy: MatchDatePolicy.live(now),
+        clock: () => now,
+        calendarResolver: (id, date) async {
+          reads.add(id);
+          if (id == 'offline') throw StateError('Offline');
+          if (id == 'missing') return null;
+          return CalendarMonth(
+            ownerId: id == 'owner' ? 'someone-else' : id,
+            year: date.year,
+            month: id == 'month' ? date.month + 1 : date.month,
+            busyDays:
+                id == 'busy' || (id == 'available' && availableBecomesBusy)
+                ? [date.day]
+                : [],
+            confirmedAt: id == 'stale'
+                ? now.subtract(const Duration(days: 30))
+                : id == 'future'
+                ? now.add(const Duration(seconds: 1))
+                : now,
+          );
+        },
+      );
+      final brief = initial
+          .withField('date', '2027-02-14')
+          .withField('budget_kzt', 300000);
+      final first = await live.send(brief: brief, action: show);
+      expect(first.result!.recommendations.map((r) => r.contractor.id), [
+        'available',
+      ]);
+      expect(first.result!.preliminary, isFalse);
+      expect(
+        first.result!.recommendations.single.explanation,
+        contains('подтверждённому календарю'),
+      );
+      expect(first.result!.summary, contains('доступность не подтверждена'));
+      availableBecomesBusy = true;
+      final second = await live.send(brief: brief, action: show);
+      expect(second.result!.outcome, MatchOutcome.noEligible);
+      expect(reads.where((id) => id == 'available').length, 2);
+    },
+  );
+
+  test(
+    'unknown and out-of-horizon live dates remain preliminary without calendar claims',
+    () async {
+      final now = DateTime.utc(2027, 1, 10);
+      var reads = 0;
+      final live = BasicAssistantService(
+        catalog,
+        datePolicy: MatchDatePolicy.live(now),
+        clock: () => now,
+        calendarResolver: (id, date) async {
+          reads++;
+          return null;
+        },
+      );
+      for (final brief in [initial, initial.withField('date', '2028-02-14')]) {
+        final turn = await live.send(
+          brief: brief.withField('budget_kzt', 1000000),
+          action: show,
+        );
+        expect(turn.result!.preliminary, isTrue);
+        expect(turn.result!.recommendations, isNotEmpty);
+        expect(
+          turn.result!.recommendations.every(
+            (r) => !r.explanation.contains('Свободен'),
+          ),
+          isTrue,
+        );
+      }
+      expect(reads, 0);
+      final outside = await live.send(
+        brief: initial.withField('date', '2028-02-14'),
+        action: show,
+      );
+      expect(
+        outside.result!.unchecked,
+        contains(contains('2027-01-10–2028-01-10')),
+      );
+      final withoutResolver = BasicAssistantService(
+        catalog,
+        datePolicy: MatchDatePolicy.live(now),
+      );
+      final confirmedDate = await withoutResolver.send(
+        brief: initial.withField('date', '2027-02-14'),
+        action: show,
+      );
+      expect(confirmedDate.result!.outcome, MatchOutcome.noEligible);
+    },
+  );
+
+  test('session accepts injected fallback for its live source', () async {
+    final delayed = _Delayed();
+    final liveFallback = BasicAssistantService(
+      catalog,
+      datePolicy: MatchDatePolicy.live(),
+    );
+    final session = AssistantSession(
+      repository: catalog,
+      service: delayed,
+      basicService: liveFallback,
+      source: 'live',
+    );
+    expect(session.controller.service, same(delayed));
+    expect(session.controller.basicService, same(liveFallback));
+    expect(session.controller.timeout, const Duration(seconds: 25));
+    session.dispose();
+  });
+
+  test(
+    'replacing route context cancels stale responses and preserves stable-key refinements',
+    () async {
+      final delayed = _Delayed();
+      final controller = AssistantController(
+        service: delayed,
+        basicService: basic,
+        repository: catalog,
+      );
+      controller.replaceContext(initial, 'event-1');
+      final old = controller.sendMessage('На старое мероприятие');
+      final next = initial.withField('category', 'Фотограф');
+      controller.replaceContext(next, 'event-2');
+      expect(controller.messages, isEmpty);
+      expect(controller.turn, isNull);
+      expect(controller.busy, isFalse);
+      await controller.retry();
+      expect(delayed.pending.length, 1);
+      delayed.pending.single.complete(
+        const AssistantTurn(brief: initial, message: 'Старый результат'),
+      );
+      await old;
+      expect(controller.brief.category, 'Фотограф');
+      final updated = controller.act(_set('budget_kzt', 300000));
+      delayed.pending.last.complete(
+        AssistantTurn(
+          brief: next.withField('budget_kzt', 300000),
+          message: 'Новый бюджет',
+        ),
+      );
+      await updated;
+      controller.replaceContext(next, 'event-2');
+      expect(controller.brief.budgetKzt, 300000);
+      expect(controller.turn!.message, 'Новый бюджет');
+      controller.replaceContext(next, 'event-2', force: true);
+      expect(controller.contextKey, 'event-2');
+      expect(controller.brief.budgetKzt, isNull);
+      expect(controller.messages, isEmpty);
+      expect(controller.turn, isNull);
+      controller.dispose();
+    },
+  );
+
+  test(
+    'new applied catalog request replaces previous conversation conditions',
+    () async {
+      final controller = AssistantController(
+        service: basic,
+        basicService: basic,
+        repository: catalog,
+      );
+      final first = initial
+          .withField('date', '2026-11-14')
+          .withField('budget_kzt', 300000)
+          .toMatchRequest();
+      controller.seedFromRequest(first);
+      await controller.act(show);
+      expect(controller.messages, isNotEmpty);
+      final next = initial
+          .withField('date', '2026-11-15')
+          .withField('budget_kzt', 500000)
+          .toMatchRequest();
+      controller.seedFromRequest(next);
+      expect(controller.brief.date, '2026-11-15');
+      expect(controller.brief.budgetKzt, 500000);
+      expect(controller.messages, isEmpty);
+      expect(controller.turn, isNull);
+      controller.dispose();
+    },
+  );
 
   test(
     'partial brief gives honest preliminary results before asking date',

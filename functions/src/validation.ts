@@ -3,7 +3,7 @@ import type { Action, AssistantInput, Brief } from "./types";
 
 export class AssistantError extends Error {
   constructor(
-    public readonly code: "invalid-argument" | "failed-precondition" | "unauthenticated" | "resource-exhausted" | "unavailable",
+    public readonly code: "invalid-argument" | "failed-precondition" | "unauthenticated" | "permission-denied" | "resource-exhausted" | "unavailable",
     message: string,
     public readonly details: Record<string, unknown> = {},
   ) { super(message); this.name = "AssistantError"; }
@@ -38,6 +38,7 @@ const actionSchema = z.object({
   field: z.string().max(80).optional(), value: z.unknown().optional(),
 }).strict();
 const inputSchema = z.object({
+  source: z.enum(["live", "demo"]).optional(),
   brief: briefSchema,
   message: z.string().trim().min(1).max(2000).optional(),
   action: actionSchema.optional(),
@@ -63,14 +64,24 @@ export function validateInput(value: unknown): AssistantInput {
 export function validateAction(value: unknown): Action { return parse(actionSchema, value); }
 export const parsePreference = (value: unknown) => parse(preferenceSchema, value);
 
+/** Missing source is the legacy demo contract; invalid values must not select it. */
+export function requestSource(value: unknown): "live" | "demo" {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new AssistantError("invalid-argument", "Некорректный запрос помощника.");
+  }
+  return parse(z.enum(["live", "demo"]).default("demo"), (value as Record<string, unknown>).source);
+}
+
 export function legacyBrief(value: unknown): Brief {
   const legacy = parse(z.object({
+    source: z.enum(["live", "demo"]).optional(),
     city: z.string(), category: z.string(), event_format: z.string(), date: calendarDate,
     budget_kzt: z.number(), hours: z.number().nullable().optional(), language: z.string().nullable().optional(),
     preferences: z.string().max(1000).optional(),
   }).strict(), value);
+  const { source: _source, ...fields } = legacy;
   return validateBrief({
-    ...legacy, hours: legacy.hours ?? null, language: legacy.language ?? null,
+    ...fields, hours: legacy.hours ?? null, language: legacy.language ?? null,
     preferences: legacy.preferences?.trim() ? [{ text: legacy.preferences.trim(), feature_id: null, importance: "preferred", polarity: "positive" }] : [],
     skipped_fields: [], excluded_ids: [], budget_scope: "contractor",
   });

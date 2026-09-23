@@ -1,12 +1,22 @@
 import '../../matching/data/catalog_repository.dart';
 import '../../matching/domain/models.dart';
+import '../../workspace/domain/workspace_models.dart' show CalendarMonth;
 import '../domain/assistant_models.dart';
 import '../domain/assistant_service.dart';
 
 /// Explicit manual mode. Never pretends to understand free text or preferences.
 class BasicAssistantService implements AssistantService {
-  BasicAssistantService(this.repository);
+  BasicAssistantService(
+    this.repository, {
+    this.datePolicy = const MatchDatePolicy.demo(),
+    this.calendarResolver,
+    DateTime Function()? clock,
+  }) : clock = clock ?? DateTime.now;
   final CatalogRepository repository;
+  final MatchDatePolicy datePolicy;
+  final Future<CalendarMonth?> Function(String contractorId, DateTime date)?
+  calendarResolver;
+  final DateTime Function() clock;
   @override
   bool get supportsFreeText => false;
 
@@ -25,7 +35,7 @@ class BasicAssistantService implements AssistantService {
     final catalog = await repository.load();
     var b = _apply(brief, action);
     _validate(b);
-    final result = b.canRecommend ? _match(catalog, b) : null;
+    final result = b.canRecommend ? await _match(catalog, b) : null;
     String? field;
     String question;
     final actions = <AssistantAction>[];
@@ -182,8 +192,10 @@ class BasicAssistantService implements AssistantService {
       warnings: [
         'Подбор кнопками: проверяем условия, пожелания по стилю не анализируются.',
       ],
-      datasetVersion: 'organizers-66-2026',
-      algorithmVersion: 'basic-1',
+      datasetVersion: datePolicy.isLive
+          ? 'live-publications'
+          : 'organizers-66-2026',
+      algorithmVersion: 'basic-2',
     );
   }
 
@@ -284,15 +296,38 @@ class BasicAssistantService implements AssistantService {
     }
   }
 
-  AssistantResult _match(List<Contractor> catalog, AssistantBrief b) {
+  Future<AssistantResult> _match(
+    List<Contractor> catalog,
+    AssistantBrief b,
+  ) async {
     final pool = catalog
         .where((c) => c.city == b.city && c.categories.contains(b.category))
         .toList();
+    final inCalendar = b.dateInPolicy(datePolicy);
+    final availability = <String, AvailabilityStatus>{};
+    if (datePolicy.isLive && inCalendar) {
+      final date = DateTime.parse(b.date!);
+      await Future.wait(
+        pool.map((contractor) async {
+          try {
+            final calendar = await calendarResolver?.call(contractor.id, date);
+            availability[contractor.id] = calendar?.ownerId == contractor.id
+                ? calendar!.availabilityOn(date, clock())
+                : AvailabilityStatus.unconfirmed;
+          } catch (_) {
+            // A failed or stale calendar must never become a free-date claim.
+            availability[contractor.id] = AvailabilityStatus.unconfirmed;
+          }
+        }),
+      );
+    }
     final unchecked = <String>[
       if (b.date == null)
         'Дата не проверена'
-      else if (!b.dateInCalendar)
-        'Дата за пределами календаря 23.09–31.12.2026',
+      else if (!inCalendar)
+        datePolicy.isLive
+            ? 'Дата за пределами календаря ${dateKey(datePolicy.firstDate)}–${dateKey(datePolicy.lastDate)}; доступность не проверена'
+            : 'Дата за пределами календаря 23.09–31.12.2026',
       if (b.budgetKzt == null || b.budgetScope == 'event')
         'Бюджет подрядчика не задан',
       if (b.preferences.isNotEmpty)
@@ -301,8 +336,17 @@ class BasicAssistantService implements AssistantService {
     final rejected = <String, int>{};
     final eligible = <Contractor>[];
     for (final c in pool) {
-      final reason = b.dateInCalendar && c.busyDates.contains(b.date)
+      final status = !inCalendar
+          ? null
+          : datePolicy.isLive
+          ? availability[c.id] ?? AvailabilityStatus.unconfirmed
+          : c.busyDates.contains(b.date)
+          ? AvailabilityStatus.busy
+          : AvailabilityStatus.available;
+      final reason = status == AvailabilityStatus.busy
           ? 'заняты на дату'
+          : status == AvailabilityStatus.unconfirmed
+          ? 'доступность не подтверждена'
           : b.budgetKzt != null &&
                 b.budgetScope == 'contractor' &&
                 c.price > b.budgetKzt!
@@ -357,7 +401,7 @@ class BasicAssistantService implements AssistantService {
                 'Длительность не подтверждена',
             ],
             explanation:
-                '${b.dateInCalendar ? 'Свободен по календарю ${b.date}; ' : ''}берёт формат «${b.eventFormat}», цена от ${c.price} ₸${b.budgetKzt != null && b.budgetScope == 'contractor' ? ' при бюджете ${b.budgetKzt} ₸' : ''}. В профиле: «${_excerpt(c.description)}».',
+                '${inCalendar ? 'Свободен по ${datePolicy.isLive ? 'подтверждённому ' : ''}календарю ${b.date}; ' : ''}берёт формат «${b.eventFormat}», цена от ${c.price} ₸${b.budgetKzt != null && b.budgetScope == 'contractor' ? ' при бюджете ${b.budgetKzt} ₸' : ''}. В профиле: «${_excerpt(c.description)}».',
           ),
       ],
     );

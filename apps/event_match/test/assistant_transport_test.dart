@@ -95,6 +95,7 @@ void main() {
         ],
       );
       expect(transport.name, 'assistantTurn');
+      expect(transport.input!['source'], 'demo');
       expect(transport.input!.containsKey('message'), false);
       expect((transport.input!['history'] as List).length, 12);
       expect((transport.input!['brief'] as Map)['date'], isNull);
@@ -109,6 +110,20 @@ void main() {
         'Помогает парам перед камерой.',
       );
       expect(response.actions.single.field, 'date');
+    },
+  );
+
+  test(
+    'live callable explicitly selects live data and allows 25 seconds',
+    () async {
+      final transport = _Transport({
+        'brief': const AssistantBrief().toJson(),
+        'message': 'Кого ищете?',
+      });
+      final service = FirebaseAssistantService(transport, source: 'live');
+      await service.send(brief: const AssistantBrief(), message: 'Фотограф');
+      expect(transport.input!['source'], 'live');
+      expect(service.timeout, const Duration(seconds: 25));
     },
   );
 

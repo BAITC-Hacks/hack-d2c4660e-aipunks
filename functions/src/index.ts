@@ -3,10 +3,11 @@ import { getFirestore } from "firebase-admin/firestore";
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { loadCatalog } from "./catalog";
+import { loadLiveCatalog } from "./live_catalog";
 import { createLanguageModel } from "./openai";
 import { AssistantApplication } from "./service";
 import { FirestoreAssistantCache, MemoryAssistantCache, type AssistantCache } from "./storage";
-import { AssistantError } from "./validation";
+import { AssistantError, requestSource } from "./validation";
 
 export interface RuntimeAuth {
   uid: string;
@@ -21,7 +22,7 @@ export interface RuntimeApplication {
 export interface RuntimeDependencies {
   cache: AssistantCache;
   readAccount: (uid: string) => Promise<AccountState>;
-  application: () => RuntimeApplication;
+  application: (context: { uid: string; source: "live" | "demo" }) => RuntimeApplication | Promise<RuntimeApplication>;
   requestsPerMinute?: number;
 }
 
@@ -82,7 +83,9 @@ export function createCallableHandler(method: "turn" | "recommend", dependencies
       if (!await dependencies.cache.rateLimit(uid, dependencies.requestsPerMinute ?? 20)) {
         throw new HttpsError("resource-exhausted", "Request limit reached");
       }
-      return await dependencies.application()[method](request.data);
+      const source = requestSource(request.data);
+      const application = await dependencies.application({ uid, source });
+      return await application[method](request.data);
     } catch (error) {
       throw safeCallableError(error);
     }
@@ -102,7 +105,6 @@ function runtimeDependencies(): RuntimeDependencies {
   if (!getApps().length) initializeApp();
   const db = getFirestore();
   const cache: AssistantCache = configuration.storage === "memory" ? new MemoryAssistantCache() : new FirestoreAssistantCache(db);
-  let application: AssistantApplication | undefined;
   dependencies = {
     cache,
     requestsPerMinute: configuration.requestsPerMinute,
@@ -116,14 +118,14 @@ function runtimeDependencies(): RuntimeDependencies {
       const status = account.data()?.status;
       return { exists: account.exists, status: typeof status === "string" ? status : null, deleted: deleted.exists };
     },
-    application: () => {
-      if (!application) {
-        // In the emulator .secret.local is loaded into env by Firebase. Do not
-        // declare a bound cloud secret there, which would trigger cloud lookups.
-        const key = process.env.OPENAI_API_KEY || (isEmulator ? undefined : openaiApiKey.value());
-        application = new AssistantApplication(loadCatalog(), cache, createLanguageModel(key));
-      }
-      return application;
+    application: async (context) => {
+      // The live snapshot and calendar resolver are recreated on every turn:
+      // publication changes and withdrawals cannot survive in an app singleton.
+      const catalog = context.source === "live" ? await loadLiveCatalog(db) : loadCatalog();
+      // In the emulator .secret.local is loaded into env by Firebase. Do not
+      // declare a bound cloud secret there, which would trigger cloud lookups.
+      const key = process.env.OPENAI_API_KEY || (isEmulator ? undefined : openaiApiKey.value());
+      return new AssistantApplication(catalog, cache, createLanguageModel(key), undefined, context);
     },
   };
   return dependencies;

@@ -1,7 +1,12 @@
 import { CALENDAR_END, CALENDAR_START, type Brief, type Catalog, type Contractor, type Evidence, type Preference, type Result } from "./types";
 import { AssistantError, validateBrief } from "./validation";
 
-export const dateIsCovered = (date: string | null): boolean => date !== null && date >= CALENDAR_START && date <= CALENDAR_END;
+export const dateIsCovered = (date: string | null, catalog?: Catalog): boolean => {
+  if (date === null) return false;
+  if (catalog?.source === "live") return Boolean(catalog.liveDatePolicy &&
+    date >= catalog.liveDatePolicy.firstDate && date <= catalog.liveDatePolicy.lastDate);
+  return date >= CALENDAR_START && date <= CALENDAR_END;
+};
 export const hasSearchMinimum = (brief: Brief): boolean => Boolean(brief.city && brief.category && brief.event_format);
 
 export function preferenceEvidence(catalog: Catalog, contractor: Contractor, preference: Preference): Evidence {
@@ -18,13 +23,17 @@ export function preferenceEvidence(catalog: Catalog, contractor: Contractor, pre
   };
 }
 
-export function uncheckedFields(brief: Brief): string[] {
+export function uncheckedFields(brief: Brief, catalog?: Catalog): string[] {
   const result: string[] = [];
   if (!brief.city) result.push("Город не задан");
   if (!brief.category) result.push("Категория не задана");
   if (!brief.event_format) result.push("Формат мероприятия не задан");
   if (!brief.date) result.push("Дата не проверена");
-  else if (!dateIsCovered(brief.date)) result.push("Дата за пределами календаря 23.09–31.12.2026");
+  else if (!dateIsCovered(brief.date, catalog)) result.push(catalog?.source === "live"
+    ? catalog.liveDatePolicy
+      ? `Дата за пределами доступного календаря ${catalog.liveDatePolicy.firstDate}–${catalog.liveDatePolicy.lastDate}; доступность не проверена`
+      : "Доступность на дату не проверена: календарь недоступен"
+    : "Дата за пределами календаря 23.09–31.12.2026");
   if (brief.budget_kzt === null) result.push("Бюджет подрядчика не задан");
   else if (brief.budget_scope === "event") result.push("Указан общий бюджет; бюджет подрядчика не задан");
   return result;
@@ -32,6 +41,7 @@ export function uncheckedFields(brief: Brief): string[] {
 
 const rejectionLabels: Record<string, string> = {
   busy: "заняты на дату", budget: "выше бюджета", format: "не берут этот формат",
+  unconfirmed: "доступность на дату не подтверждена",
   language: "не работают на выбранном языке", hours: "не подходят по длительности",
   preference: "противоречат обязательному пожеланию", excluded: "уже отклонены вами",
 };
@@ -45,15 +55,19 @@ export interface Evaluation { pool: Contractor[]; eligible: EvaluatedProfile[]; 
 /** No model, network, clock, implicit default date or random ordering in this engine. */
 export function evaluate(catalog: Catalog, rawBrief: Brief, semanticScores?: ReadonlyMap<string, number>): Evaluation {
   const brief = validateBrief(rawBrief);
-  const unchecked = uncheckedFields(brief);
+  const unchecked = uncheckedFields(brief, catalog);
   const pool = catalog.contractors.filter((item) => (!brief.city || item.city === brief.city) &&
     (!brief.category || item.categories.includes(brief.category)));
   const eligible: EvaluatedProfile[] = [];
   const rejected: Record<string, number> = {};
   for (const contractor of pool) {
     const evidence = brief.preferences.map((preference) => preferenceEvidence(catalog, contractor, preference));
+    const availability = catalog.availabilityDate === brief.date ? catalog.availability?.get(contractor.id) : undefined;
+    const calendarRejection = !dateIsCovered(brief.date, catalog) ? null
+      : catalog.source === "live" ? availability === "available" ? null : availability === "busy" ? "busy" : "unconfirmed"
+      : contractor.busy_dates.includes(brief.date!) ? "busy" : null;
     const reason = brief.excluded_ids.includes(contractor.id) ? "excluded"
-      : dateIsCovered(brief.date) && contractor.busy_dates.includes(brief.date!) ? "busy"
+      : calendarRejection ? calendarRejection
       : brief.budget_scope === "contractor" && brief.budget_kzt !== null && contractor.price_from_kzt > brief.budget_kzt ? "budget"
       : brief.event_format && !contractor.event_formats.includes(brief.event_format) ? "format"
       : brief.language && !contractor.languages.includes(brief.language) ? "language"
@@ -119,11 +133,13 @@ export function recommend(catalog: Catalog, rawBrief: Brief, semanticScores?: Re
   }));
   const preliminary = unchecked.length > 0 || recommendations.some((item) => item.unchecked.length > 0);
   const rejectedText = Object.entries(rejected).map(([reason, count]) => `${count} — ${rejectionLabels[reason]}`).join("; ");
-  let summary = pool.length === 0 ? "В этом городе такой категории пока нет в каталоге."
+  let summary = catalog.source === "live" && catalog.contractors.length === 0 ? "В живом каталоге пока нет опубликованных подрядчиков."
+    : pool.length === 0 ? "В этом городе такой категории пока нет в каталоге."
     : eligible.length === 0 ? `Никто не проходит по заданным условиям. ${rejectedText}.`
     : `${preliminary ? "Предварительно подходят" : "Проходят по указанным условиям"} ${eligible.length} из ${pool.length}; показано ${recommendations.length}.`;
   if (eligible.length && rejectedText) summary += ` Исключены: ${rejectedText}.`;
-  if (!dateIsCovered(brief.date)) summary += " Доступность на дату не проверена.";
+  if (!dateIsCovered(brief.date, catalog)) summary += " Доступность на дату не проверена.";
+  else if (catalog.source === "live" && eligible.length) summary += " Доступность на дату подтверждена актуальным календарём.";
   if (brief.budget_kzt === null || brief.budget_scope === "event") summary += " Бюджет на одного подрядчика не проверен.";
   return { outcome: pool.length === 0 ? "category_absent" : eligible.length === 0 ? "no_eligible" : "matched",
     recommendations, summary, preliminary, unchecked };

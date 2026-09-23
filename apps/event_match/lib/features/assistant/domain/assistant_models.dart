@@ -50,12 +50,11 @@ class AssistantBrief {
   final String budgetScope;
   bool get canRecommend =>
       city != null && category != null && eventFormat != null;
-  bool get dateInCalendar {
+  bool get dateInCalendar => dateInPolicy(const MatchDatePolicy.demo());
+
+  bool dateInPolicy(MatchDatePolicy policy) {
     final parsed = date == null ? null : DateTime.tryParse(date!);
-    return parsed != null &&
-        dateKey(parsed) == date &&
-        !parsed.isBefore(DateTime(2026, 9, 23)) &&
-        !parsed.isAfter(DateTime(2026, 12, 31));
+    return parsed != null && dateKey(parsed) == date && policy.contains(parsed);
   }
 
   factory AssistantBrief.fromRequest(MatchRequest r) => AssistantBrief(
@@ -102,9 +101,11 @@ class AssistantBrief {
   AssistantBrief withField(String field, Object? value) =>
       AssistantBrief.fromJson({...toJson(), field: value});
 
-  MatchRequest toMatchRequest() {
+  MatchRequest toMatchRequest({
+    MatchDatePolicy datePolicy = const MatchDatePolicy.demo(),
+  }) {
     if (!canRecommend ||
-        !dateInCalendar ||
+        !dateInPolicy(datePolicy) ||
         budgetKzt == null ||
         budgetScope != 'contractor') {
       throw StateError(
@@ -121,7 +122,7 @@ class AssistantBrief {
       language: language,
       preferences: preferences.map((p) => p.text).join('; '),
     );
-    r.validate();
+    r.validate(datePolicy: datePolicy);
     return r;
   }
 }

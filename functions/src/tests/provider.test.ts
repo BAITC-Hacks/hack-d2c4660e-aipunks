@@ -47,7 +47,7 @@ test("OpenAI adapter uses Responses strict structured output and validates resul
     history: [{ role: "assistant", text: "Контекст" }] }, catalog);
   assert.equal(called, true);
   assert.equal(result.brief.city, "Алматы");
-  assert.equal(model.version, "configured-model:brief-v1");
+  assert.equal(model.version, "configured-model:brief-v2");
 });
 
 test("provider absence fails before any network request", async () => {
@@ -106,4 +106,34 @@ test("embedding endpoint sends explicit model/dimensions and rejects unusable ve
     const bad = new OpenAILanguageModel("test-provider-key", "configured-model", fakeFetch(() => response({ data: [{ embedding: vector }] })));
     await assert.rejects(bad.embed("Текст", "text-embedding-3-small", 3), safeError);
   }
+});
+
+test("batch embedding indices restore input order and reject missing, duplicate or invalid vectors", async () => {
+  const good = new OpenAILanguageModel("test-provider-key", "configured-model", fakeFetch((url, init) => {
+    assert.equal(url, "https://api.openai.com/v1/embeddings");
+    assert.deepEqual(JSON.parse(String(init.body)), { model: "text-embedding-3-small", dimensions: 3, input: ["Запрос", "Профиль"], encoding_format: "float" });
+    return response({ data: [{ index: 1, embedding: [0, 1, 0] }, { index: 0, embedding: [1, 0, 0] }] });
+  }));
+  assert.deepEqual(await good.embedMany(["Запрос", "Профиль"], "text-embedding-3-small", 3), [[1, 0, 0], [0, 1, 0]]);
+  for (const data of [
+    [{ index: 0, embedding: [1, 0, 0] }],
+    [{ index: 0, embedding: [1, 0, 0] }, { index: 0, embedding: [0, 1, 0] }],
+    [{ index: 0, embedding: [1, 0, 0] }, { index: 2, embedding: [0, 1, 0] }],
+    [{ index: 0, embedding: [1, 0, 0] }, { index: 1, embedding: [0, 0, 0] }],
+  ]) {
+    const bad = new OpenAILanguageModel("test-provider-key", "configured-model", fakeFetch(() => response({ data })));
+    await assert.rejects(bad.embedMany(["Запрос", "Профиль"], "text-embedding-3-small", 3), safeError);
+  }
+});
+
+test("live extraction prompt uses the live calendar policy and never promises demo availability", async () => {
+  const model = new OpenAILanguageModel("test-provider-key", "configured-model", fakeFetch((_url, init) => {
+    const body = JSON.parse(String(init.body));
+    assert.match(body.instructions, /2030-01-01—2031-01-01/);
+    assert.ok(!body.instructions.includes("2026-09-23—2026-12-31"));
+    return response(providerResponse(extracted()));
+  }));
+  await model.extract({ source: "live", brief: emptyBrief(), message: "Нужен ведущий" }, {
+    ...catalog, source: "live", liveDatePolicy: { firstDate: "2030-01-01", lastDate: "2031-01-01" },
+  });
 });

@@ -186,6 +186,17 @@ test("clarification keeps the scope of a preserved event budget", async () => {
   assert.equal(turn.brief.budget_scope, "event");
 });
 
+test("partial clarification retains required preferences and previously skipped unrelated fields", async () => {
+  const preference = { text: "Спокойный обязательно", feature_id: "calm", importance: "required" as const, polarity: "positive" as const };
+  const before = fullBrief({ date: null, skipped_fields: ["date"], preferences: [preference] });
+  const model = new FakeModel(async () => ({ ...interpretation(emptyBrief()), operation: "clarify",
+    question: "Бюджет всего события или специалиста?", question_field: "budget_kzt", choices: [] }));
+  const app = new AssistantApplication(fixture(), new MemoryAssistantCache(), model, null);
+  const turn = await app.turn({ brief: before, message: "Сумма 500 тысяч" });
+  assert.deepEqual(turn.brief.preferences, [preference]);
+  assert.deepEqual(turn.brief.skipped_fields, ["date"]);
+});
+
 test("input validation rejects invalid, oversized and stale requests before any provider call", async () => {
   const model = new FakeModel();
   const app = new AssistantApplication(fixture(), new MemoryAssistantCache(), model, null);
@@ -315,4 +326,108 @@ test("a stale embedding artifact fails closed instead of mixing versions", () =>
   const index = embeddingIndex(c);
   assert.throws(() => new AssistantApplication(c, new MemoryAssistantCache(), new FakeModel(), { ...index, datasetVersion: "old" }), hasCode("failed-precondition"));
   assert.throws(() => new AssistantApplication(c, new MemoryAssistantCache(), new FakeModel(), { ...index, inputVersion: "old" }), hasCode("failed-precondition"));
+});
+
+function liveFixture(patch: Partial<Catalog> = {}): Catalog {
+  return { ...fixture(), source: "live", datasetVersion: "live-v1", features: new Map(),
+    contractors: fixture().contractors.map((contractor) => ({ ...contractor, is_live: true, contact: "public-contact", portfolio_urls: [] })),
+    liveDatePolicy: { firstDate: "2026-09-23", lastDate: "2027-09-23" },
+    resolveAvailability: async () => new Map([["a", "available"], ["b", "available"], ["c", "unconfirmed"]]), ...patch };
+}
+
+test("live and demo input sources cannot use each other's catalog even through the legacy endpoint", async () => {
+  const demo = new AssistantApplication(fixture(), new MemoryAssistantCache(), new FakeModel(), null);
+  const live = new AssistantApplication(liveFixture(), new MemoryAssistantCache(), new FakeModel(), undefined, { uid: "u", source: "live" });
+  const brief = fullBrief();
+  const action = actionFor(brief, "Показать", "show_results");
+  await assert.rejects(demo.turn({ source: "live", brief, action }), hasCode("invalid-argument"));
+  await assert.rejects(live.turn({ brief, action }), hasCode("invalid-argument"));
+  await assert.rejects(demo.turn({ source: "other", brief, action }), hasCode("invalid-argument"));
+  const request = { city: brief.city, category: brief.category, event_format: brief.event_format, date: brief.date, budget_kzt: brief.budget_kzt };
+  await assert.rejects(live.recommend(request), hasCode("invalid-argument"));
+  assert.equal((await live.recommend({ ...request, source: "live" })).outcome, "matched");
+});
+
+test("live availability resolves the new extracted date and rereads it on every turn", async () => {
+  const resolved: string[] = [];
+  let busy = false;
+  const catalog = liveFixture({ resolveAvailability: async (date) => {
+    resolved.push(date);
+    return new Map([["a", busy ? "busy" : "available"], ["b", "available"], ["c", "unconfirmed"]]);
+  } });
+  const model = new FakeModel(async () => interpretation(fullBrief({ date: "2026-11-03" })));
+  const app = new AssistantApplication(catalog, new MemoryAssistantCache(), model, undefined, { uid: "u", source: "live" });
+  const input = { source: "live", brief: fullBrief(), message: "Лучше 3 ноября" };
+  const first = await app.turn(input);
+  assert.deepEqual(first.result?.recommendations.map((item) => item.contractor.id), ["a", "b"]);
+  busy = true;
+  const second = await app.turn(input);
+  assert.deepEqual(second.result?.recommendations.map((item) => item.contractor.id), ["b"]);
+  assert.deepEqual(resolved, ["2026-11-03", "2026-11-03"]);
+  assert.equal(model.extractionInputs.length, 1);
+});
+
+test("outside live horizon keeps the exact date, skips calendar reads and labels preliminary results", async () => {
+  let reads = 0;
+  const model = new FakeModel();
+  model.available = false;
+  const app = new AssistantApplication(liveFixture({ resolveAvailability: async () => { reads++; return new Map(); } }),
+    new MemoryAssistantCache(), model, undefined, { uid: "u", source: "live" });
+  const brief = fullBrief({ date: "2028-02-10" });
+  const turn = await app.turn({ source: "live", brief, action: actionFor(brief, "Показать", "show_results") });
+  assert.equal(turn.brief.date, "2028-02-10");
+  assert.equal(reads, 0);
+  assert.equal(turn.result?.preliminary, true);
+  assert.ok(turn.result?.recommendations.length);
+});
+
+test("live typed flow works without a key and never turns public description into reviewed evidence", async () => {
+  const model = new FakeModel();
+  model.available = false;
+  const app = new AssistantApplication(liveFixture(), new MemoryAssistantCache(), model, undefined, { uid: "u", source: "live" });
+  const brief = fullBrief({ preferences: [{ text: "Спокойный", feature_id: "calm", importance: "required", polarity: "positive" }] });
+  const turn = await app.turn({ source: "live", brief, action: actionFor(brief, "Показать", "show_results") });
+  assert.equal(turn.mode, "basic");
+  assert.equal(turn.result?.preliminary, true);
+  assert.deepEqual(turn.result?.recommendations.map((item) => item.contractor.id), ["a", "b"]);
+  assert.ok(turn.result?.recommendations.every((item) => item.contractor.is_live && item.evidence[0].status === "unknown" && item.evidence[0].quote === ""));
+  assert.equal(model.embeddingInputs.length, 0);
+  await assert.rejects(app.turn({ source: "live", brief, message: "Измени пожелания" }), hasCode("failed-precondition"));
+  await assert.rejects(app.recommend({ source: "live", city: brief.city, category: brief.category,
+    event_format: brief.event_format, date: brief.date, budget_kzt: brief.budget_kzt, preferences: "Спокойный" }), hasCode("failed-precondition"));
+});
+
+test("private parsing and query embeddings are UID scoped while public profile vectors are shared", async () => {
+  class RecordingCache extends MemoryAssistantCache {
+    writes: { key: string; ownerUid?: string; value: unknown }[] = [];
+    override async putIfAbsent<T>(key: string, value: T, ttl: number, metadata?: { ownerUid?: string }): Promise<T> {
+      this.writes.push({ key, value, ...metadata });
+      return super.putIfAbsent(key, value, ttl, metadata);
+    }
+  }
+  const cache = new RecordingCache();
+  const model = new FakeModel();
+  const catalog = liveFixture();
+  const brief = fullBrief({ preferences: [{ text: "Спокойный", feature_id: "calm", importance: "preferred", polarity: "positive" }] });
+  const input = { source: "live", brief, message: "Оставляем эти условия" };
+  for (const uid of ["user-a", "user-a", "user-b"]) {
+    await new AssistantApplication(catalog, cache, model, undefined, { uid, source: "live" }).turn(input);
+  }
+  assert.equal(model.extractionInputs.length, 2);
+  assert.equal(model.embeddingInputs.length, 3); // Identical public descriptions share a vector, queries remain private.
+  const privateWrites = cache.writes.filter((entry) => entry.key.startsWith("parse:") || entry.key.startsWith("live-query:"));
+  assert.deepEqual(new Set(privateWrites.map((entry) => entry.ownerUid)), new Set(["user-a", "user-b"]));
+  assert.ok(cache.writes.filter((entry) => entry.key.startsWith("live-profile:")).every((entry) => entry.ownerUid === undefined));
+});
+
+test("a withdrawn live exclusion does not block future turns and changed profile content refreshes its vector", async () => {
+  const cache = new MemoryAssistantCache();
+  const model = new FakeModel();
+  const brief = fullBrief({ excluded_ids: ["withdrawn-live-id"], preferences: [{ text: "Спокойный", feature_id: "calm", importance: "preferred", polarity: "positive" }] });
+  const input = { source: "live", brief, action: actionFor(brief, "Показать", "show_results") };
+  const catalog = liveFixture();
+  await new AssistantApplication(catalog, cache, model, undefined, { uid: "u", source: "live" }).turn(input);
+  const changed = { ...catalog, contractors: catalog.contractors.map((contractor) => contractor.id === "a" ? { ...contractor, description: "Новая спокойная программа." } : contractor) };
+  await new AssistantApplication(changed, cache, model, undefined, { uid: "u", source: "live" }).turn(input);
+  assert.equal(model.embeddingInputs.length, 3); // Original query + shared description, then only one changed public vector.
 });

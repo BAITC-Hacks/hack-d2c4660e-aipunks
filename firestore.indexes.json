@@ -31,6 +31,18 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "assistant_cache",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "assistant_rate_limits",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "favorites",
       "fieldPath": "contractor.id",
       "indexes": [

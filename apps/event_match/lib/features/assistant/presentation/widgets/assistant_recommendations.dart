@@ -13,12 +13,14 @@ class AssistantRecommendations extends StatelessWidget {
     required this.preliminary,
     required this.onReject,
     this.enabled = true,
+    this.footerBuilder,
   });
 
   final List<Recommendation> recommendations;
   final Map<String, List<String>> unverified;
   final bool preliminary;
   final bool enabled;
+  final Widget Function(Contractor)? footerBuilder;
   final Future<void> Function(String id, String reason) onReject;
 
   Future<void> _reject(BuildContext context, Contractor contractor) async {
@@ -93,7 +95,7 @@ class AssistantRecommendations extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Вернуться к чату'),
+                    child: const Text('Вернуться к подборке'),
                   ),
                 ),
               ],
@@ -203,7 +205,9 @@ class AssistantRecommendations extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             [
-              c.synthetic
+              c.isLive
+                  ? 'Опубликованный профиль'
+                  : c.synthetic
                   ? 'Синтетический профиль'
                   : 'Анонимизированный профиль',
               if (c.priceImputed) 'Цена восстановлена',
@@ -212,6 +216,10 @@ class AssistantRecommendations extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
+          if (footerBuilder != null) ...[
+            footerBuilder!(c),
+            const SizedBox(height: 12),
+          ],
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -326,7 +334,9 @@ class _ComparisonProfile extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             [
-              c.synthetic
+              c.isLive
+                  ? 'Опубликованный профиль'
+                  : c.synthetic
                   ? 'Синтетический профиль'
                   : 'Анонимизированный профиль',
               if (c.priceImputed) 'Цена восстановлена',

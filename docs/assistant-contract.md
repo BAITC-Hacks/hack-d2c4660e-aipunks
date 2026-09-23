@@ -1,6 +1,6 @@
 # Assistant contract v1
 
-Firebase callable `assistantTurn` input: `{brief, message?, action?, history?}`. Exactly one message or action; history has at most 12 `{role: "user"|"assistant", text}` entries. Text max 2000 chars. Brief is revalidated on every call.
+Firebase callable `assistantTurn` input: `{source?: "live"|"demo", brief, message?, action?, history?}`. Source defaults to demo for compatibility; the integrated catalogue explicitly sends live. The server selects and validates the source, ignoring client profile data. Exactly one message or action; history has at most 12 `{role: "user"|"assistant", text}` entries. Text max 2000 chars. Brief is revalidated on every call.
 
 `brief`: `{city: string|null, category: string|null, event_format: string|null, date: "YYYY-MM-DD"|null, budget_kzt: number|null, hours: number|null, language: string|null, preferences: Preference[], skipped_fields: string[], excluded_ids: string[], budget_scope: "contractor"|"event"}`. Empty arrays/default contractor for new sessions; no demo defaults. Preference = `{text: string, feature_id: string|null, importance: "required"|"preferred", polarity: "positive"|"negative"}`. Feature IDs defined by versioned evidence artifact. Date outside catalog window is retained but unchecked, never promised available. Event budget is not a contractor budget.
 
@@ -8,8 +8,8 @@ Firebase callable `assistantTurn` input: `{brief, message?, action?, history?}`.
 
 Output `AssistantTurn`: `{brief, message, actions: Action[], question_field: string|null, result: Result|null, mode: "ai"|"basic", warnings: string[], dataset_version: string, algorithm_version: string}`.
 
-`Result`: `{outcome: "matched"|"category_absent"|"no_eligible", recommendations: Recommendation[], summary: string, preliminary: boolean, unchecked: string[]}`. Up to 3 Recommendations = `{contractor: original JSONL profile, explanation: string, unchecked: string[], evidence: [{feature_id, quote, status}]}`. Status supported/contradicted/unknown; empty quote only for unknown. Do not describe a candidate with unchecked required preferences as fully matching.
+`Result`: `{outcome: "matched"|"category_absent"|"no_eligible", recommendations: Recommendation[], summary: string, preliminary: boolean, unchecked: string[]}`. Up to 3 Recommendations = `{contractor: public profile DTO (live adds is_live/contact/portfolio_urls), explanation: string, unchecked: string[], evidence: [{feature_id, quote, status}]}`. Status supported/contradicted/unknown; empty quote only for unknown. Do not describe a candidate with unchecked required preferences as fully matching.
 
-`recommendContractors` accepts existing MatchRequest JSON fields (preferences remains free text on that legacy input) and returns Result + dataset_version/algorithm_version/mode. Shared engine, no second rule set.
+`recommendContractors` accepts optional source plus existing MatchRequest JSON fields (preferences remains free text on that legacy input) and returns Result + dataset_version/algorithm_version/mode. Shared engine, no second rule set.
 
 Fallback: typed controls are supported without an API key. Free text must fail with an actionable AI-unavailable error rather than be falsely presented as understood. Local Dart basic service may implement the same typed workflow, with structural filtering and factual quotes; no semantic claims. Errors preserve brief and offer retry/manual mode. Every displayed action is bound to the current turn.

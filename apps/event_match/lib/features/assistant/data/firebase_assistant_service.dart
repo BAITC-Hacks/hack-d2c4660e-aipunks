@@ -11,18 +11,22 @@ abstract interface class AssistantTransport {
 
 /// Firebase owns transport and authentication. No LLM secret enters Flutter.
 class AssistantBackend implements AssistantTransport {
-  AssistantBackend({FirebaseFunctions? functions, FirebaseAuth? auth})
-    : functions =
-          functions ??
-          FirebaseFunctions.instanceFor(
-            region: const String.fromEnvironment(
-              'ASSISTANT_FUNCTIONS_REGION',
-              defaultValue: 'us-central1',
-            ),
-          ),
-      auth = auth ?? FirebaseAuth.instance;
+  AssistantBackend({
+    FirebaseFunctions? functions,
+    FirebaseAuth? auth,
+    this.timeout = const Duration(seconds: 25),
+  }) : functions =
+           functions ??
+           FirebaseFunctions.instanceFor(
+             region: const String.fromEnvironment(
+               'ASSISTANT_FUNCTIONS_REGION',
+               defaultValue: 'us-central1',
+             ),
+           ),
+       auth = auth ?? FirebaseAuth.instance;
   final FirebaseFunctions functions;
   final FirebaseAuth auth;
+  final Duration timeout;
 
   @override
   Future<Map<String, dynamic>> call(
@@ -32,10 +36,7 @@ class AssistantBackend implements AssistantTransport {
     try {
       if (auth.currentUser == null) await auth.signInAnonymously();
       final result = await functions
-          .httpsCallable(
-            name,
-            options: HttpsCallableOptions(timeout: const Duration(seconds: 10)),
-          )
+          .httpsCallable(name, options: HttpsCallableOptions(timeout: timeout))
           .call<Map<String, dynamic>>(input);
       return jsonMap(result.data);
     } on FirebaseAuthException catch (_) {
@@ -62,8 +63,14 @@ class AssistantBackend implements AssistantTransport {
 }
 
 class FirebaseAssistantService implements AssistantService {
-  FirebaseAssistantService(this.backend);
+  FirebaseAssistantService(
+    this.backend, {
+    this.source = 'demo',
+    this.timeout = const Duration(seconds: 25),
+  });
   final AssistantTransport backend;
+  final String source;
+  final Duration timeout;
   @override
   bool get supportsFreeText => true;
   @override
@@ -73,15 +80,18 @@ class FirebaseAssistantService implements AssistantService {
     AssistantAction? action,
     List<AssistantMessage> history = const [],
   }) async {
-    final response = await backend.call('assistantTurn', {
-      'brief': brief.toJson(),
-      'message': ?message,
-      if (action != null) 'action': action.toJson(),
-      'history': history
-          .skip(history.length > 12 ? history.length - 12 : 0)
-          .map((m) => m.toJson())
-          .toList(),
-    });
+    final response = await backend
+        .call('assistantTurn', {
+          'source': source,
+          'brief': brief.toJson(),
+          'message': ?message,
+          if (action != null) 'action': action.toJson(),
+          'history': history
+              .skip(history.length > 12 ? history.length - 12 : 0)
+              .map((m) => m.toJson())
+              .toList(),
+        })
+        .timeout(timeout);
     return AssistantTurn.fromJson(response);
   }
 }

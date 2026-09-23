@@ -15,10 +15,19 @@ class AssistantScreen extends StatefulWidget {
     super.key,
     required this.controller,
     this.onOpenCatalog,
+    this.embedded = false,
+    this.contextHeader,
+    this.cardFooterBuilder,
+    this.resultActionsBuilder,
   });
 
   final AssistantController controller;
   final VoidCallback? onOpenCatalog;
+  final bool embedded;
+  final Widget? contextHeader;
+  final Widget Function(Contractor)? cardFooterBuilder;
+  final Widget Function(Future<void> Function(String) editField)?
+  resultActionsBuilder;
 
   @override
   State<AssistantScreen> createState() => _AssistantScreenState();
@@ -30,12 +39,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final _scroll = ScrollController();
   final _latestMessage = GlobalKey();
   int _messageCount = 0;
+  int _inputRevision = 0;
 
   AssistantController get controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
+    _inputRevision = controller.contextRevision;
     controller.addListener(_changed);
   }
 
@@ -44,12 +55,19 @@ class _AssistantScreenState extends State<AssistantScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != controller) {
       oldWidget.controller.removeListener(_changed);
+      _input.clear();
+      _inputRevision = controller.contextRevision;
       controller.addListener(_changed);
     }
   }
 
   void _changed() {
     if (!mounted) return;
+    if (_inputRevision != controller.contextRevision) {
+      _inputRevision = controller.contextRevision;
+      _input.clear();
+    }
+    if (widget.embedded) return;
     if (controller.messages.length != _messageCount) {
       _messageCount = controller.messages.length;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -87,11 +105,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   Future<void> _send() async {
+    final activeController = controller;
+    final revision = activeController.contextRevision;
     final value = _input.text.trim();
     if (value.isEmpty || controller.busy) return;
     _input.clear();
     setState(() {});
-    await controller.sendMessage(value);
+    await activeController.sendMessage(value);
+    if (mounted &&
+        identical(controller, activeController) &&
+        controller.contextRevision == revision &&
+        controller.error != null &&
+        _input.text.isEmpty) {
+      _input.text = value;
+      setState(() {});
+    }
   }
 
   Future<void> _setField(String field, Object value, String label) =>
@@ -106,8 +134,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
       );
 
   Future<void> _editField(String field) async {
+    final activeController = controller;
+    final revision = controller.contextRevision;
+    bool current() =>
+        mounted &&
+        identical(controller, activeController) &&
+        controller.contextRevision == revision;
     if (field == 'preferences') {
-      if (controller.service.supportsFreeText) {
+      if (controller.service.supportsFreeText &&
+          !(widget.embedded && controller.turn?.mode == 'basic')) {
         _focus.requestFocus();
         if (_input.text.trim().isEmpty) _input.text = 'Для меня важно: ';
         _input.selection = TextSelection.collapsed(offset: _input.text.length);
@@ -131,6 +166,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
         initialDate:
             existing != null && existing.year >= 1900 && existing.year <= 2100
             ? existing
+            : widget.embedded
+            ? DateTime.now()
             : DateTime(2026, 9, 23),
         firstDate: DateTime(1900),
         lastDate: DateTime(2100, 12, 31),
@@ -138,7 +175,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         cancelText: 'Отмена',
         confirmText: 'Выбрать',
       );
-      if (date != null && mounted) {
+      if (date != null && current()) {
         await _setField(
           field,
           dateKey(date),
@@ -155,7 +192,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           initial: field == 'budget_kzt' ? brief.budgetKzt : brief.hours,
         ),
       );
-      if (value != null && mounted) {
+      if (value != null && current()) {
         await _setField(
           field,
           field == 'budget_kzt' ? value.toInt() : value.toDouble(),
@@ -180,7 +217,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       context: context,
       builder: (_) => _ValuePicker(title: _fieldName(field), values: values),
     );
-    if (value != null && mounted) {
+    if (value != null && current()) {
       await _setField(field, value, '${_fieldName(field)}: $value');
     }
   }
@@ -217,7 +254,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     ),
   );
 
-  Widget _brief({required bool compact}) {
+  Widget _brief({required bool compact, VoidCallback? beforeFreeText}) {
     final brief = controller.brief;
     final values = <String, String?>{
       'category': brief.category,
@@ -327,9 +364,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
               ],
             ),
         ],
-        if (controller.service.supportsFreeText)
+        if (controller.service.supportsFreeText &&
+            !(widget.embedded && controller.turn?.mode == 'basic'))
           TextButton.icon(
-            onPressed: controller.busy ? null : () => _editField('preferences'),
+            onPressed: controller.busy
+                ? null
+                : () {
+                    beforeFreeText?.call();
+                    _editField('preferences');
+                  },
             icon: const Icon(Icons.add),
             label: const Text('Добавить пожелание'),
           ),
@@ -459,6 +502,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   Widget _actions(List<AssistantAction> actions) {
+    final revision = controller.contextRevision;
     final enabled = !controller.busy && controller.error == null;
     return Wrap(
       spacing: 8,
@@ -497,7 +541,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
                         ],
                       ),
                     );
-                    if (action != null && mounted) await _act(action);
+                    if (action != null &&
+                        mounted &&
+                        controller.contextRevision == revision) {
+                      await _act(action);
+                    }
                   },
           ),
       ],
@@ -505,6 +553,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   Widget _message(AssistantMessage message, bool latest) {
+    final revision = controller.contextRevision;
     final user = message.role == 'user';
     final turn = message.turn;
     final result = turn?.result;
@@ -580,7 +629,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 },
                 preliminary: result.preliminary,
                 enabled: !controller.busy && controller.error == null,
-                onReject: _reject,
+                onReject: (id, detail) async {
+                  if (mounted && controller.contextRevision == revision) {
+                    await _reject(id, detail);
+                  }
+                },
               ),
             ],
           ],
@@ -656,7 +709,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   maxLines: 3,
                   textInputAction: TextInputAction.send,
                   decoration: InputDecoration(
-                    labelText: freeText ? 'Ваше сообщение' : 'Подбор кнопками',
+                    labelText: freeText
+                        ? (widget.embedded
+                              ? 'Кого ищете и что важно?'
+                              : 'Ваше сообщение')
+                        : (widget.embedded
+                              ? 'Подбор по условиям'
+                              : 'Подбор кнопками'),
                     hintText: freeText
                         ? 'Кого ищете и что важно?'
                         : 'Выберите ответ или измените условия',
@@ -685,153 +744,385 @@ class _AssistantScreenState extends State<AssistantScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    child: ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) => LayoutBuilder(
-        builder: (context, constraints) {
-          final wide =
-              constraints.maxWidth >= 1000 &&
-              MediaQuery.textScalerOf(context).scale(16) <= 24;
-          final padding = constraints.maxWidth < 600 ? 16.0 : 24.0;
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1280),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(padding, 8, padding, 0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Помощник',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        if (controller.messages.isNotEmpty)
-                          IconButton(
-                            tooltip: 'Начать новый подбор',
-                            onPressed: controller.busy
-                                ? null
-                                : () {
-                                    controller.reset();
-                                    _input.clear();
-                                    setState(() {});
-                                  },
-                            icon: const Icon(Icons.restart_alt),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                if (!wide) ...[
-                                  ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxHeight:
-                                          constraints.maxHeight *
-                                          (constraints.maxHeight < 600
-                                              ? .2
-                                              : .35),
-                                    ),
-                                    child: SingleChildScrollView(
-                                      child: _brief(compact: true),
+  Widget _inline() {
+    final revision = controller.contextRevision;
+    final freeText =
+        controller.service.supportsFreeText && controller.turn?.mode != 'basic';
+    final brief = controller.brief;
+    final turn = controller.turn;
+    final result = turn?.result;
+    final fields = <String, String?>{
+      'category': brief.category,
+      'city': brief.city,
+      'event_format': brief.eventFormat,
+      'date': brief.date == null ? null : _displayDate(brief.date!),
+      'budget_kzt': brief.budgetKzt == null
+          ? null
+          : 'до ${money(brief.budgetKzt!)} ₸',
+      'language': brief.language,
+      'hours': brief.hours == null ? null : '${brief.hours} ч',
+    };
+    return Column(
+      key: const Key('integrated-assistant'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.lavender,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Найдём специалиста для вашего события',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              if (widget.contextHeader != null) widget.contextHeader!,
+              Text(
+                freeText
+                    ? 'Опишите задачу одной фразой. Учтём условия и покажем до трёх вариантов.'
+                    : 'Выберите условия — покажем до трёх вариантов. Текстовый AI сейчас недоступен; пожелания по стилю нужно уточнить у подрядчика.',
+              ),
+              if (freeText) _composer(),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final entry in fields.entries)
+                    if (entry.value != null ||
+                        const [
+                          'category',
+                          'city',
+                          'event_format',
+                        ].contains(entry.key))
+                      ActionChip(
+                        key: Key('inline-${entry.key}'),
+                        avatar: const Icon(Icons.edit_outlined, size: 16),
+                        label: Text(entry.value ?? _fieldName(entry.key)),
+                        onPressed: controller.busy
+                            ? null
+                            : () => _editField(entry.key),
+                      ),
+                  ActionChip(
+                    label: const Text('Все условия'),
+                    avatar: const Icon(Icons.tune, size: 16),
+                    onPressed: controller.busy
+                        ? null
+                        : () => showDialog<void>(
+                            context: context,
+                            builder: (dialogContext) => Dialog(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 440,
+                                ),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.all(16),
+                                  child: ListenableBuilder(
+                                    listenable: controller,
+                                    builder: (_, _) => Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        _brief(
+                                          compact: false,
+                                          beforeFreeText: () =>
+                                              Navigator.pop(dialogContext),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(dialogContext),
+                                          child: const Text('Готово'),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 12),
-                                ],
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                  if (brief.canRecommend)
+                    ActionChip(
+                      label: const Text('Следующий специалист'),
+                      onPressed: controller.busy
+                          ? null
+                          : () => controller.act(
+                              const AssistantAction(
+                                id: 'next-category',
+                                label: 'Следующий специалист',
+                                type: 'next_category',
+                              ),
+                            ),
+                    ),
+                ],
+              ),
+              if (brief.preferences.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Учтено: ${brief.preferences.map((p) => p.text).join('; ')}',
+                ),
+              ],
+              if (turn == null && !brief.canRecommend) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final category in [
+                      'Ведущий',
+                      'Фотограф',
+                      'Банкетный зал',
+                    ])
+                      if (controller.catalog.any(
+                        (c) => c.categories.contains(category),
+                      ))
+                        ActionChip(
+                          label: Text(category),
+                          onPressed: controller.busy
+                              ? null
+                              : () => _setField('category', category, category),
+                        ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (controller.busy)
+          Semantics(
+            liveRegion: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LinearProgressIndicator(),
+                SizedBox(height: 8),
+                Text('Проверяем условия и календарь…'),
+              ],
+            ),
+          ),
+        if (controller.error != null) _error(),
+        if (turn != null) ...[
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              turn.message,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final warning in turn.warnings)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(warning),
+            ),
+          const SizedBox(height: 12),
+          _actions(turn.actions),
+          if (result != null) ...[
+            const SizedBox(height: 20),
+            AssistantRecommendations(
+              recommendations: result.toMatchResult().recommendations,
+              unverified: {
+                for (final r in result.recommendations)
+                  r.contractor.id: {
+                    ...result.unchecked,
+                    ...r.unchecked,
+                  }.toList(),
+              },
+              preliminary: result.preliminary,
+              enabled: !controller.busy && controller.error == null,
+              onReject: (id, detail) async {
+                if (mounted && controller.contextRevision == revision) {
+                  await _reject(id, detail);
+                }
+              },
+              footerBuilder: widget.cardFooterBuilder,
+            ),
+            if (result.recommendations.isNotEmpty &&
+                widget.resultActionsBuilder != null) ...[
+              const SizedBox(height: 16),
+              widget.resultActionsBuilder!(_editField),
+            ],
+          ],
+        ],
+        if (controller.messages.isNotEmpty)
+          ExpansionTile(
+            title: const Text('История уточнений'),
+            children: [
+              for (final message in controller.messages)
+                ListTile(
+                  dense: true,
+                  title: Text(message.text),
+                  leading: Icon(
+                    message.role == 'user'
+                        ? Icons.person_outline
+                        : Icons.auto_awesome_outlined,
+                  ),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.embedded
+      ? ListenableBuilder(listenable: controller, builder: (_, _) => _inline())
+      : SafeArea(
+          child: ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) => LayoutBuilder(
+              builder: (context, constraints) {
+                final wide =
+                    constraints.maxWidth >= 1000 &&
+                    MediaQuery.textScalerOf(context).scale(16) <= 24;
+                final padding = constraints.maxWidth < 600 ? 16.0 : 24.0;
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(padding, 8, padding, 0),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Помощник',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ),
+                              if (controller.messages.isNotEmpty)
+                                IconButton(
+                                  tooltip: 'Начать новый подбор',
+                                  onPressed: controller.busy
+                                      ? null
+                                      : () {
+                                          controller.reset();
+                                          _input.clear();
+                                          setState(() {});
+                                        },
+                                  icon: const Icon(Icons.restart_alt),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                                 Expanded(
-                                  child: ListView(
-                                    controller: _scroll,
-                                    keyboardDismissBehavior:
-                                        ScrollViewKeyboardDismissBehavior
-                                            .onDrag,
-                                    padding: const EdgeInsets.only(bottom: 16),
+                                  child: Column(
                                     children: [
-                                      if (!controller
-                                          .service
-                                          .supportsFreeText) ...[
-                                        Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.sage,
-                                            borderRadius: BorderRadius.circular(
-                                              16,
-                                            ),
+                                      if (!wide) ...[
+                                        ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxHeight:
+                                                constraints.maxHeight *
+                                                (constraints.maxHeight < 600
+                                                    ? .2
+                                                    : .35),
                                           ),
-                                          child: const Text(
-                                            'Базовый режим · подбор по условиям кнопками. Смысл пожеланий пока не учитывается.',
+                                          child: SingleChildScrollView(
+                                            child: _brief(compact: true),
                                           ),
                                         ),
-                                        const SizedBox(height: 16),
+                                        const SizedBox(height: 12),
                                       ],
-                                      if (controller.messages.isEmpty)
-                                        _welcome(),
-                                      for (
-                                        var i = 0;
-                                        i < controller.messages.length;
-                                        i++
-                                      )
-                                        _message(
-                                          controller.messages[i],
-                                          i == controller.messages.length - 1,
-                                        ),
-                                      if (controller.busy)
-                                        Semantics(
-                                          liveRegion: true,
-                                          child: const Padding(
-                                            padding: EdgeInsets.symmetric(
-                                              vertical: 16,
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.stretch,
-                                              children: [
-                                                LinearProgressIndicator(),
-                                                SizedBox(height: 12),
-                                                Text(
-                                                  'Учитываю условия и проверяю варианты…',
-                                                ),
-                                              ],
-                                            ),
+                                      Expanded(
+                                        child: ListView(
+                                          controller: _scroll,
+                                          keyboardDismissBehavior:
+                                              ScrollViewKeyboardDismissBehavior
+                                                  .onDrag,
+                                          padding: const EdgeInsets.only(
+                                            bottom: 16,
                                           ),
+                                          children: [
+                                            if (!controller
+                                                .service
+                                                .supportsFreeText) ...[
+                                              Container(
+                                                padding: const EdgeInsets.all(
+                                                  16,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.sage,
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                ),
+                                                child: const Text(
+                                                  'Базовый режим · подбор по условиям кнопками. Смысл пожеланий пока не учитывается.',
+                                                ),
+                                              ),
+                                              const SizedBox(height: 16),
+                                            ],
+                                            if (controller.messages.isEmpty)
+                                              _welcome(),
+                                            for (
+                                              var i = 0;
+                                              i < controller.messages.length;
+                                              i++
+                                            )
+                                              _message(
+                                                controller.messages[i],
+                                                i ==
+                                                    controller.messages.length -
+                                                        1,
+                                              ),
+                                            if (controller.busy)
+                                              Semantics(
+                                                liveRegion: true,
+                                                child: const Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                    vertical: 16,
+                                                  ),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .stretch,
+                                                    children: [
+                                                      LinearProgressIndicator(),
+                                                      SizedBox(height: 12),
+                                                      Text(
+                                                        'Учитываю условия и проверяю варианты…',
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            if (controller.error != null)
+                                              _error(),
+                                          ],
                                         ),
-                                      if (controller.error != null) _error(),
+                                      ),
+                                      _composer(),
                                     ],
                                   ),
                                 ),
-                                _composer(),
+                                if (wide) ...[
+                                  const SizedBox(width: 24),
+                                  SizedBox(
+                                    width: 300,
+                                    child: SingleChildScrollView(
+                                      child: _brief(compact: false),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                          if (wide) ...[
-                            const SizedBox(width: 24),
-                            SizedBox(
-                              width: 300,
-                              child: SingleChildScrollView(
-                                child: _brief(compact: false),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
-    ),
-  );
+          ),
+        );
 }
 
 String _displayDate(String value) {

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import '../../matching/data/catalog_repository.dart';
 import '../../matching/domain/models.dart';
@@ -10,7 +11,7 @@ class AssistantController extends ChangeNotifier {
     required this.service,
     required this.basicService,
     required this.repository,
-    this.timeout = const Duration(seconds: 10),
+    this.timeout = const Duration(seconds: 25),
   }) : _initialService = service;
   final AssistantService _initialService;
   AssistantService service;
@@ -25,6 +26,10 @@ class AssistantController extends ChangeNotifier {
   String? error;
   bool _disposed = false;
   int _generation = 0;
+  String? _contextKey;
+  String? get contextKey => _contextKey;
+  int _contextRevision = 0;
+  int get contextRevision => _contextRevision;
   _PendingTurn? _pending;
   final Stopwatch _session = Stopwatch()..start();
   bool _firstResult = false;
@@ -53,9 +58,32 @@ class AssistantController extends ChangeNotifier {
   }
 
   void seedFromRequest(MatchRequest request) {
-    if (messages.isNotEmpty || brief.canRecommend) return;
-    brief = AssistantBrief.fromRequest(request);
+    replaceContext(
+      AssistantBrief.fromRequest(request),
+      'request:${jsonEncode(request.toJson())}',
+    );
     track('applied_catalog_conditions_imported');
+  }
+
+  /// Stable route keys preserve refinements; changed external context invalidates
+  /// pending turns and old recommendations before another request can run.
+  /// Use [force] for explicit edits while preserving the originating route key.
+  void replaceContext(AssistantBrief next, String key, {bool force = false}) {
+    if (_disposed || (!force && _contextKey == key)) return;
+    ++_generation;
+    ++_contextRevision;
+    _contextKey = key;
+    brief = next;
+    turn = null;
+    messages.clear();
+    busy = false;
+    error = null;
+    _pending = null;
+    _firstResult = false;
+    _clarificationCounts.clear();
+    events.clear();
+    _session.reset();
+    track('context_replaced');
     notifyListeners();
   }
 
@@ -153,7 +181,7 @@ class AssistantController extends ChangeNotifier {
     } on TimeoutException {
       if (_disposed || generation != _generation) return;
       error =
-          'Ответ занимает больше 10 секунд. Условия сохранены — повторите или выберите подбор кнопками.';
+          'Ответ занимает дольше обычного. Условия сохранены — повторите или выберите подбор кнопками.';
     } catch (_) {
       if (_disposed || generation != _generation) return;
       error =
@@ -189,6 +217,8 @@ class AssistantController extends ChangeNotifier {
 
   void reset() {
     ++_generation;
+    ++_contextRevision;
+    _contextKey = null;
     service = _initialService;
     brief = const AssistantBrief();
     turn = null;

@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import '../features/assistant/presentation/assistant_host.dart';
+import '../features/assistant/data/basic_assistant_service.dart';
+import '../features/assistant/domain/assistant_service.dart';
+import '../features/planning/domain/event_plan_draft_store.dart';
+import '../features/workspace/data/workspace_catalog_repository.dart';
 import '../features/auth/presentation/auth_pages.dart';
 import '../features/auth/presentation/session_controller.dart';
 import '../features/auth/presentation/settings_page.dart';
@@ -15,7 +19,6 @@ import '../features/matching/domain/recommendation_service.dart';
 import '../features/matching/domain/models.dart';
 import '../features/planning/data/firestore_event_plan_repository.dart';
 import '../features/planning/domain/event_plan_repository.dart';
-import '../features/planning/domain/event_plan_draft_store.dart';
 import '../features/planning/presentation/event_plan_page.dart';
 import '../features/workspace/domain/workspace_repository.dart';
 import '../features/workspace/presentation/admin_page.dart';
@@ -37,6 +40,7 @@ class EventMatchApp extends StatefulWidget {
     this.plans,
     this.communications,
     this.initialLocation,
+    this.assistantService,
   });
   final CatalogRepository? repository;
   final RecommendationService? recommendationService;
@@ -45,6 +49,7 @@ class EventMatchApp extends StatefulWidget {
   final EventPlanRepository? plans;
   final CommunicationRepository? communications;
   final String? initialLocation;
+  final AssistantService? assistantService;
   @override
   State<EventMatchApp> createState() => _EventMatchAppState();
 }
@@ -55,15 +60,30 @@ class _EventMatchAppState extends State<EventMatchApp> {
   CommunicationRepository? _communications;
   final CatalogRepository _demoRepository = AssetCatalogRepository();
   AssistantSession? _assistantSession;
+  AssistantSession? _liveAssistant;
   final _planDrafts = EventPlanDraftStore();
   String? _workspaceUid;
-
   void _accountChanged() {
     final next = widget.session?.uid;
     if (_workspaceUid != next) {
       _planDrafts.clear();
+      _liveAssistant?.controller.reset();
       _workspaceUid = next;
     }
+  }
+
+  AssistantSession _liveSession() {
+    final catalog = WorkspaceCatalogRepository(widget.workspace!);
+    return _liveAssistant ??= AssistantSession(
+      repository: catalog,
+      service: widget.assistantService,
+      source: 'live',
+      basicService: BasicAssistantService(
+        catalog,
+        datePolicy: MatchDatePolicy.live(),
+        calendarResolver: widget.workspace!.getCalendar,
+      ),
+    );
   }
 
   @override
@@ -98,7 +118,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
         onSelectConversation: (id) => _router!.go(
           Uri(
             path: state.uri.path,
-            queryParameters: {'conversation': id},
+            queryParameters: id.isEmpty ? null : {'conversation': id},
           ).toString(),
         ),
         onOpenEvents: () => _router!.go('/client/events'),
@@ -134,11 +154,18 @@ class _EventMatchAppState extends State<EventMatchApp> {
                     constraints: const BoxConstraints(maxWidth: 1200),
                     child: CatalogPage(
                       repository: workspace,
+                      assistant: _liveSession().controller,
+                      eventId: state.uri.queryParameters['event'],
+                      selectionId: state.uri.queryParameters['selection'],
+                      initialCategory: state.uri.queryParameters['category'],
                       uid: session.canUseWorkspace ? session.uid : null,
                       onCreateInquiry: (contractor) => context.go(
                         Uri(
                           path: '/client/messages',
-                          queryParameters: {'contractor': contractor.id},
+                          queryParameters: {
+                            'contractor': contractor.id,
+                            'event': ?state.uri.queryParameters['event'],
+                          },
                         ).toString(),
                       ),
                       onRequireSignIn: () => context.go(
@@ -163,12 +190,13 @@ class _EventMatchAppState extends State<EventMatchApp> {
               repository: _demoRepository,
               service: widget.recommendationService,
               onOpenAssistant: (request) =>
-                  context.go('/assistant', extra: request),
+                  context.go('/demo/assistant', extra: request),
             ),
           ),
         ),
+        GoRoute(path: '/assistant', redirect: (_, _) => '/'),
         GoRoute(
-          path: '/assistant',
+          path: '/demo/assistant',
           builder: (context, state) => _PublicFrame(
             session: session,
             selected: '/assistant',
@@ -248,6 +276,15 @@ class _EventMatchAppState extends State<EventMatchApp> {
                     uid: session.uid!,
                     initialEventId: state.uri.queryParameters['event'],
                     draftStore: _planDrafts,
+                    onFindContractors: (event, category) => context.go(
+                      Uri(
+                        path: '/',
+                        queryParameters: {
+                          'event': event.id,
+                          'category': ?category,
+                        },
+                      ).toString(),
+                    ),
                     onOpenEvents: () => context.go('/client/events'),
                   );
                 }
@@ -258,6 +295,15 @@ class _EventMatchAppState extends State<EventMatchApp> {
                         repository: workspace,
                         uid: session.uid!,
                         section: section,
+                        onFindContractors: (event, selection) => context.go(
+                          Uri(
+                            path: '/',
+                            queryParameters: {
+                              'event': event.id,
+                              if (selection != null) 'selection': selection.id,
+                            },
+                          ).toString(),
+                        ),
                         onOpenPlan: (eventId) => context.go(
                           Uri(
                             path: '/client/planner',
@@ -311,6 +357,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
   @override
   void dispose() {
     widget.session?.removeListener(_accountChanged);
+    _liveAssistant?.dispose();
     _router?.dispose();
     _assistantSession?.dispose();
     super.dispose();
@@ -381,10 +428,6 @@ class _PublicFrame extends StatelessWidget {
                   TextButton(
                     onPressed: () => context.go('/demo'),
                     child: const Text('Демо-каталог'),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/assistant'),
-                    child: const Text('Помощник · демо'),
                   ),
                   FilledButton.tonal(
                     onPressed: () => context.go(

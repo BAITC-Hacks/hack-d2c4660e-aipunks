@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
+import { AssistantError } from "./validation";
 
 export interface AssistantCache {
   get<T>(key: string): Promise<T | null>;
   /** Concurrent writers receive the same first committed value until expiry. */
-  putIfAbsent<T>(key: string, value: T, ttlSeconds: number): Promise<T>;
+  putIfAbsent<T>(key: string, value: T, ttlSeconds: number, metadata?: { ownerUid?: string }): Promise<T>;
   /** A shared per-UID fixed one-minute window; true consumes one request. */
   rateLimit(uid: string, limit: number): Promise<boolean>;
 }
@@ -38,7 +39,7 @@ export class MemoryAssistantCache implements AssistantCache {
     return clone(entry.value as T);
   }
 
-  async putIfAbsent<T>(key: string, value: T, ttlSeconds: number): Promise<T> {
+  async putIfAbsent<T>(key: string, value: T, ttlSeconds: number, _metadata?: { ownerUid?: string }): Promise<T> {
     validTtl(ttlSeconds);
     const now = this.clock();
     // No await between checking and writing: a single emulator process has one
@@ -76,16 +77,21 @@ export class FirestoreAssistantCache implements AssistantCache {
     return entry.value as T;
   }
 
-  async putIfAbsent<T>(key: string, value: T, ttlSeconds: number): Promise<T> {
+  async putIfAbsent<T>(key: string, value: T, ttlSeconds: number, metadata?: { ownerUid?: string }): Promise<T> {
     validTtl(ttlSeconds);
     const reference = this.db.collection("assistant_cache").doc(documentId(key));
     const now = this.clock();
     return this.db.runTransaction(async (transaction) => {
+      if (metadata?.ownerUid) {
+        const tombstone = await transaction.get(this.db.collection("deletedAccounts").doc(metadata.ownerUid));
+        if (tombstone.data() !== undefined) throw new AssistantError("permission-denied", "Аккаунт удалён.");
+      }
       const snapshot = await transaction.get(reference);
       const existing = snapshot.data();
       if (existing && typeof existing.expiresAtMs === "number" && existing.expiresAtMs > now) return existing.value as T;
       const expiresAtMs = now + ttlSeconds * 1000;
-      transaction.set(reference, { value, expiresAtMs, expiresAt: Timestamp.fromMillis(expiresAtMs) });
+      transaction.set(reference, { value, expiresAtMs, expiresAt: Timestamp.fromMillis(expiresAtMs),
+        ...(metadata?.ownerUid ? { ownerUid: metadata.ownerUid } : {}) });
       return value;
     });
   }
@@ -95,6 +101,8 @@ export class FirestoreAssistantCache implements AssistantCache {
     const window = Math.floor(this.clock() / minute);
     const reference = this.db.collection("assistant_rate_limits").doc(documentId(uid));
     return this.db.runTransaction(async (transaction) => {
+      const tombstone = await transaction.get(this.db.collection("deletedAccounts").doc(uid));
+      if (tombstone.data() !== undefined) throw new AssistantError("permission-denied", "Аккаунт удалён.");
       const snapshot = await transaction.get(reference);
       const existing = snapshot.data();
       const count = existing?.window === window && Number.isSafeInteger(existing.count) ? Number(existing.count) : 0;

@@ -92,6 +92,28 @@ test("invalid cache TTL and request limits never disable protection", async () =
   for (const value of ["0", "-1", "no-limit", "Infinity", "1001", "1.5"]) assert.equal(configuredRateLimit(value), 20);
 });
 
+test("private Firestore cache entries retain ownerUid for account erasure; public vectors do not", async () => {
+  const store = transactionStore();
+  const cache = new FirestoreAssistantCache(store.db, () => 1000);
+  await cache.putIfAbsent("parse:private", { preferences: ["Частное пожелание"] }, 60, { ownerUid: "account-a" });
+  await cache.putIfAbsent("profile:public", [1, 0, 0], 60);
+  const rows = [...store.documents.values()];
+  assert.equal(rows.filter((row) => row.ownerUid === "account-a").length, 1);
+  assert.equal(rows.filter((row) => !("ownerUid" in row)).length, 1);
+  assert.ok(rows.every((row) => "expiresAt" in row));
+});
+
+test("a deletion tombstone prevents in-flight requests from recreating private cache or rate records", async () => {
+  const store = transactionStore();
+  const cache = new FirestoreAssistantCache(store.db, () => 1000);
+  store.documents.set("deletedAccounts/removed", { completed: true });
+  for (const work of [
+    () => cache.putIfAbsent("parse:removed", { preferences: ["Частное пожелание"] }, 60, { ownerUid: "removed" }),
+    () => cache.rateLimit("removed", 20),
+  ]) await assert.rejects(work(), (error: unknown) => error instanceof AssistantError && error.code === "permission-denied");
+  assert.deepEqual([...store.documents.keys()], ["deletedAccounts/removed"]);
+});
+
 test("an isolated Functions emulator cannot fall through to production account reads", () => {
   assert.doesNotThrow(() => assertEmulatorConfiguration(false, undefined));
   assert.doesNotThrow(() => assertEmulatorConfiguration(true, "127.0.0.1:8080"));
@@ -167,6 +189,21 @@ test("both callable methods recheck access before rate budget and before invokin
   assert.deepEqual(calls, ["account", "application", "account", "account"]);
   restricted = false;
   assert.deepEqual(await recommend({ auth: guest, data: payload }), { method: "recommend", value: payload });
+});
+
+test("callable selects a verified source and passes authenticated UID to its fresh application", async () => {
+  const contexts: { uid: string; source: "live" | "demo" }[] = [];
+  const handler = createCallableHandler("turn", {
+    cache: new MemoryAssistantCache(), readAccount: async () => noAccount,
+    application: async (context) => {
+      contexts.push(context);
+      return { turn: async () => context.source, recommend: async () => null };
+    },
+  });
+  assert.equal(await handler({ auth: member, data: { source: "live" } }), "live");
+  assert.equal(await handler({ auth: guest, data: {} }), "demo");
+  await assert.rejects(handler({ auth: member, data: { source: "invalid" } }), hasCode("invalid-argument"));
+  assert.deepEqual(contexts, [{ uid: "member", source: "live" }, { uid: "guest", source: "demo" }]);
 });
 
 test("callable errors contain static public messages and never raw model, transport or validation secrets", async () => {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /** Trusted, local maintenance only. Never ship these credentials to Flutter. */
 import { parseArgs } from 'node:util';
+import { createHash } from 'node:crypto';
 import { initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -95,13 +96,17 @@ async function deleteAccount() {
   if (!lockDoc.exists && (account?.status !== 'deactivated' || account.deletionRequested !== true)) {
     throw new Error('Requires the owner’s recorded request: status=deactivated and deletionRequested=true');
   }
-  const [events, selections, favorites, calendars, eventPlans] = await Promise.all([
+  const assistantCacheQuery = store.collection('assistant_cache').where('ownerUid', '==', uid);
+  const assistantRateLimitRef = store.doc(`assistant_rate_limits/${createHash('sha256').update(uid).digest('hex')}`);
+  const [events, selections, favorites, calendars, eventPlans, assistantCache, assistantRateLimit] = await Promise.all([
     accountRef.collection('events').get(), accountRef.collection('selections').get(),
     accountRef.collection('favorites').get(), store.collection(`calendars/${uid}/months`).get(),
     accountRef.collection('eventPlans').get(),
+    assistantCacheQuery.get(), assistantRateLimitRef.get(),
   ]);
   console.log(JSON.stringify({ project: values.project, command, uid, execute: values.execute, resuming: lockDoc.exists,
-    ownDocuments: { events: events.size, selections: selections.size, favorites: favorites.size, calendarMonths: calendars.size, eventPlans: eventPlans.size },
+    ownDocuments: { events: events.size, selections: selections.size, favorites: favorites.size, calendarMonths: calendars.size, eventPlans: eventPlans.size,
+      assistantCache: assistantCache.size, assistantRateLimits: assistantRateLimit.exists ? 1 : 0 },
     additionalCleanup: 'contractor snapshots, conversations and linked support with messages/read states/audits, profile, publication, staff role, audit identifiers, Firebase Auth',
   }, null, 2));
   if (!values.execute) return;
@@ -120,6 +125,18 @@ async function deleteAccount() {
     await auth.updateUser(uid, { disabled: true });
     await auth.revokeRefreshTokens(uid);
   } catch (error) { if (error.code !== 'auth/user-not-found') throw error; }
+
+  // Re-query after the deletion lock rather than trusting the preview snapshot.
+  // Server cache writes check this lock transactionally, so in-flight assistant
+  // requests cannot recreate private cache rows while the cleanup is running.
+  while (true) {
+    const page = await assistantCacheQuery.limit(250).get();
+    if (page.empty) break;
+    const batch = store.batch();
+    for (const entry of page.docs) batch.delete(entry.ref);
+    await batch.commit();
+  }
+  await assistantRateLimitRef.delete();
 
   // Historical selections are private snapshots, so remove this contractor's
   // copied public content as well. All other entries and event metadata survive.

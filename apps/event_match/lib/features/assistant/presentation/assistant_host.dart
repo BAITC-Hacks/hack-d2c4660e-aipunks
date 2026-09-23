@@ -79,8 +79,17 @@ class AssistantSession {
   AssistantSession({
     required CatalogRepository repository,
     AssistantService? service,
+    AssistantService? basicService,
+    String source = 'demo',
   }) {
-    final basic = BasicAssistantService(repository);
+    final basic =
+        basicService ??
+        BasicAssistantService(
+          repository,
+          datePolicy: source == 'live'
+              ? MatchDatePolicy.live()
+              : const MatchDatePolicy.demo(),
+        );
     AssistantService active = service ?? basic;
     const emulator = bool.fromEnvironment('USE_FIREBASE_EMULATORS');
     const enabled = bool.fromEnvironment('ASSISTANT_BACKEND_ENABLED');
@@ -100,7 +109,10 @@ class AssistantSession {
             : '127.0.0.1';
         functions.useFunctionsEmulator(host, 5001);
       }
-      active = FirebaseAssistantService(AssistantBackend(functions: functions));
+      active = FirebaseAssistantService(
+        AssistantBackend(functions: functions),
+        source: source,
+      );
     }
     controller = AssistantController(
       service: active,
