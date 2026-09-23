@@ -60,7 +60,7 @@ class _RejectDialogState extends State<_RejectDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     scrollable: true,
-    title:  Text(tr(context, 'Что не подошло?')),
+    title: Text(tr(context, 'Что не подошло?')),
     content: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -85,7 +85,9 @@ class _RejectDialogState extends State<_RejectDialog> {
           minLines: 1,
           maxLines: 4,
           textInputAction: TextInputAction.done,
-          decoration:  InputDecoration(labelText: trNullable(context, 'Своя причина')),
+          decoration: InputDecoration(
+            labelText: trNullable(context, 'Своя причина'),
+          ),
           onChanged: (_) => setState(() {}),
           onSubmitted: (value) {
             if (value.trim().isNotEmpty) Navigator.pop(context, value.trim());
@@ -96,13 +98,13 @@ class _RejectDialogState extends State<_RejectDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child:  Text(tr(context, 'Отмена')),
+        child: Text(tr(context, 'Отмена')),
       ),
       FilledButton(
         onPressed: _reason.text.trim().isEmpty
             ? null
             : () => Navigator.pop(context, _reason.text.trim()),
-        child:  Text(tr(context, 'Обновить подборку')),
+        child: Text(tr(context, 'Обновить подборку')),
       ),
     ],
   );

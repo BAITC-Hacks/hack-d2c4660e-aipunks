@@ -136,7 +136,7 @@ class _WorkspaceStreamState<T> extends State<WorkspaceStream<T>> {
           action: OutlinedButton.icon(
             onPressed: () => setState(() => _stream = widget.create()),
             icon: const Icon(Icons.refresh),
-            label:  Text(tr(context, 'Повторить')),
+            label: Text(tr(context, 'Повторить')),
           ),
         );
       }
@@ -308,17 +308,22 @@ Future<String?> workspaceReason(BuildContext context, String title) async {
             minLines: 2,
             maxLines: 4,
             maxLength: 1000,
-            decoration:  InputDecoration(labelText: trNullable(context, 'Причина')),
-            validator: localizeValidator(context, (value) => (value ?? '').trim().isEmpty
-                ? 'Укажите причину изменения'
-                : null),
+            decoration: InputDecoration(
+              labelText: trNullable(context, 'Причина'),
+            ),
+            validator: localizeValidator(
+              context,
+              (value) => (value ?? '').trim().isEmpty
+                  ? 'Укажите причину изменения'
+                  : null,
+            ),
           ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child:  Text(tr(context, 'Отмена')),
+          child: Text(tr(context, 'Отмена')),
         ),
         FilledButton(
           onPressed: () {
@@ -326,7 +331,7 @@ Future<String?> workspaceReason(BuildContext context, String title) async {
               Navigator.pop(context, controller.text.trim());
             }
           },
-          child:  Text(tr(context, 'Подтвердить')),
+          child: Text(tr(context, 'Подтвердить')),
         ),
       ],
     ),

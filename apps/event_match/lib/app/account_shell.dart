@@ -111,7 +111,6 @@ class AccountShell extends StatelessWidget {
   Widget _navigation(BuildContext context, {bool drawer = false}) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
-      const Align(alignment: Alignment.centerRight, child: LanguagePicker()),
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
         child: Column(
@@ -131,7 +130,7 @@ class AccountShell extends StatelessWidget {
         key: ValueKey(_mode),
         initialValue: _mode,
         isExpanded: true,
-        decoration:  InputDecoration(
+        decoration: InputDecoration(
           labelText: trNullable(context, 'Кабинет'),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
@@ -175,19 +174,19 @@ class AccountShell extends StatelessWidget {
       const Divider(height: 32),
       ListTile(
         leading: const Icon(Icons.auto_awesome_outlined),
-        title:  Text(tr(context, 'ИИ-помощник')),
+        title: Text(tr(context, 'ИИ-помощник')),
         onTap: () =>
             CommunicationScope.maybeOf(context)?.openAssistant(context),
       ),
       ListTile(
         leading: const Icon(Icons.chat_bubble_outline),
-        title:  Text(tr(context, 'Сообщения')),
+        title: Text(tr(context, 'Сообщения')),
         onTap: () =>
             CommunicationScope.maybeOf(context)?.openMessages(context, null),
       ),
       ListTile(
         leading: const Icon(Icons.search_outlined),
-        title:  Text(tr(context, 'Каталог')),
+        title: Text(tr(context, 'Каталог')),
         onTap: () {
           if (drawer) Navigator.pop(context);
           context.go('/');
@@ -195,7 +194,7 @@ class AccountShell extends StatelessWidget {
       ),
       ListTile(
         leading: const Icon(Icons.logout_outlined),
-        title:  Text(tr(context, 'Выйти')),
+        title: Text(tr(context, 'Выйти')),
         onTap: () async {
           if (drawer) Navigator.pop(context);
           try {

@@ -240,7 +240,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-         Text(tr(context, 'Нажмите на условие, чтобы изменить его.')),
+        Text(tr(context, 'Нажмите на условие, чтобы изменить его.')),
         const SizedBox(height: 12),
         for (final entry in values.entries)
           Padding(
@@ -281,7 +281,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 ),
                 if (entry.value != null)
                   IconButton(
-                    tooltip: trNullable(context, 'Убрать: ${_fieldName(entry.key)}'),
+                    tooltip: trNullable(
+                      context,
+                      'Убрать: ${_fieldName(entry.key)}',
+                    ),
                     onPressed: controller.busy
                         ? null
                         : () => controller.act(
@@ -318,7 +321,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   ),
                 ),
                 IconButton(
-                  tooltip: trNullable(context, 'Убрать пожелание: ${brief.preferences[i].text}'),
+                  tooltip: trNullable(
+                    context,
+                    'Убрать пожелание: ${brief.preferences[i].text}',
+                  ),
                   onPressed: controller.busy
                       ? null
                       : () => controller.act(
@@ -338,7 +344,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           TextButton.icon(
             onPressed: controller.busy ? null : () => _editField('preferences'),
             icon: const Icon(Icons.add),
-            label:  Text(tr(context, 'Добавить пожелание')),
+            label: Text(tr(context, 'Добавить пожелание')),
           ),
         if (brief.canRecommend)
           OutlinedButton.icon(
@@ -352,7 +358,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     ),
                   ),
             icon: const Icon(Icons.person_add_alt_outlined),
-            label:  Text(tr(context, 'Следующий специалист')),
+            label: Text(tr(context, 'Следующий специалист')),
           ),
       ],
     );
@@ -367,7 +373,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           ? ExpansionTile(
               shape: const Border(),
               collapsedShape: const Border(),
-              title:  Text(tr(context, 'Уже учтено')),
+              title: Text(tr(context, 'Уже учтено')),
               subtitle: Text(
                 [
                       brief.category,
@@ -475,14 +481,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
           ),
         if (actions.length > 5)
           ActionChip(
-            label:  Text(tr(context, 'Ещё варианты')),
+            label: Text(tr(context, 'Ещё варианты')),
             onPressed: !enabled
                 ? null
                 : () async {
                     final action = await showDialog<AssistantAction>(
                       context: context,
                       builder: (context) => SimpleDialog(
-                        title:  Text(tr(context, 'Выберите вариант')),
+                        title: Text(tr(context, 'Выберите вариант')),
                         children: [
                           for (final action in actions.skip(4))
                             SimpleDialogOption(
@@ -495,7 +501,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                             ),
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child:  Text(tr(context, 'Отмена')),
+                            child: Text(tr(context, 'Отмена')),
                           ),
                         ],
                       ),
@@ -580,14 +586,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ],
             if (result != null && widget.resultsOnPage) ...[
               const SizedBox(height: 12),
-               Text(
-                tr(context, 'Подборка и сравнение обновлены на основной странице.'),
+              Text(
+                tr(
+                  context,
+                  'Подборка и сравнение обновлены на основной странице.',
+                ),
               ),
               if (widget.onOpenCatalog != null)
                 TextButton.icon(
                   onPressed: widget.onOpenCatalog,
                   icon: const Icon(Icons.arrow_back),
-                  label:  Text(tr(context, 'Вернуться к подборке')),
+                  label: Text(tr(context, 'Вернуться к подборке')),
                 ),
             ],
             if (result != null && !widget.resultsOnPage) ...[
@@ -636,7 +645,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           const SizedBox(height: 8),
           Text(controller.error!),
           const SizedBox(height: 8),
-           Text(tr(context, 'Ваши условия сохранены.')),
+          Text(tr(context, 'Ваши условия сохранены.')),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -644,17 +653,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
             children: [
               OutlinedButton(
                 onPressed: controller.busy ? null : controller.retry,
-                child:  Text(tr(context, 'Повторить')),
+                child: Text(tr(context, 'Повторить')),
               ),
               if (controller.service.supportsFreeText)
                 TextButton(
                   onPressed: controller.busy ? null : controller.useBasicMode,
-                  child:  Text(tr(context, 'Продолжить кнопками')),
+                  child: Text(tr(context, 'Продолжить кнопками')),
                 ),
               if (widget.onOpenCatalog != null)
                 TextButton(
                   onPressed: widget.onOpenCatalog,
-                  child:  Text(tr(context, 'Открыть каталог')),
+                  child: Text(tr(context, 'Открыть каталог')),
                 ),
             ],
           ),
@@ -684,10 +693,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   maxLines: 3,
                   textInputAction: TextInputAction.send,
                   decoration: InputDecoration(
-                    labelText: trNullable(context, freeText ? 'Ваше сообщение' : 'Подбор кнопками'),
-                    hintText: trNullable(context, freeText
-                        ? 'Кого ищете и что важно?'
-                        : 'Выберите ответ или измените условия'),
+                    labelText: trNullable(
+                      context,
+                      freeText ? 'Ваше сообщение' : 'Подбор кнопками',
+                    ),
+                    hintText: trNullable(
+                      context,
+                      freeText
+                          ? 'Кого ищете и что важно?'
+                          : 'Выберите ответ или измените условия',
+                    ),
                     counterText: '',
                   ),
                   onChanged: (_) => setState(() {}),
@@ -741,7 +756,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
                           ),
                           if (controller.messages.isNotEmpty)
                             IconButton(
-                              tooltip: trNullable(context, 'Начать новый подбор'),
+                              tooltip: trNullable(
+                                context,
+                                'Начать новый подбор',
+                              ),
                               onPressed: controller.busy
                                   ? null
                                   : () {
@@ -796,8 +814,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
                                               16,
                                             ),
                                           ),
-                                          child:  Text(
-                                            tr(context, 'Базовый режим · подбор по условиям кнопками. Смысл пожеланий пока не учитывается.'),
+                                          child: Text(
+                                            tr(
+                                              context,
+                                              'Базовый режим · подбор по условиям кнопками. Смысл пожеланий пока не учитывается.',
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(height: 16),
@@ -907,7 +928,7 @@ class _ValuePickerState extends State<_ValuePicker> {
             TextField(
               autofocus: true,
               maxLength: 100,
-              decoration:  InputDecoration(
+              decoration: InputDecoration(
                 labelText: trNullable(context, 'Поиск вариантов'),
                 counterText: '',
               ),
@@ -947,7 +968,7 @@ class _ValuePickerState extends State<_ValuePicker> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child:  Text(tr(context, 'Отмена')),
+          child: Text(tr(context, 'Отмена')),
         ),
       ],
     );
@@ -991,8 +1012,11 @@ class _NumberDialogState extends State<_NumberDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.budget) ...[
-             Text(
-              tr(context, 'Максимальная сумма для этого специалиста, не всего события.'),
+            Text(
+              tr(
+                context,
+                'Максимальная сумма для этого специалиста, не всего события.',
+              ),
             ),
             const SizedBox(height: 16),
           ],
@@ -1008,12 +1032,18 @@ class _NumberDialogState extends State<_NumberDialog> {
               ),
             ],
             decoration: InputDecoration(
-              labelText: trNullable(context, widget.budget ? 'Сумма, ₸' : 'Часы'),
+              labelText: trNullable(
+                context,
+                widget.budget ? 'Сумма, ₸' : 'Часы',
+              ),
             ),
             textInputAction: TextInputAction.done,
-            validator: localizeValidator(context, (_) => value == null || !value!.isFinite || value! <= 0
-                ? 'Введите число больше нуля'
-                : null),
+            validator: localizeValidator(
+              context,
+              (_) => value == null || !value!.isFinite || value! <= 0
+                  ? 'Введите число больше нуля'
+                  : null,
+            ),
             onFieldSubmitted: (_) => _submit(),
           ),
         ],
@@ -1022,9 +1052,9 @@ class _NumberDialogState extends State<_NumberDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child:  Text(tr(context, 'Отмена')),
+        child: Text(tr(context, 'Отмена')),
       ),
-      FilledButton(onPressed: _submit, child:  Text(tr(context, 'Применить'))),
+      FilledButton(onPressed: _submit, child: Text(tr(context, 'Применить'))),
     ],
   );
 }

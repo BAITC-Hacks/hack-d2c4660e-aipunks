@@ -40,8 +40,11 @@ class AlternativeDatesStrip extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
-         Text(
-          tr(context, 'Все подходящие варианты с теми же фильтрами. Нажмите на дату, чтобы обновить подбор.'),
+        Text(
+          tr(
+            context,
+            'Все подходящие варианты с теми же фильтрами. Нажмите на дату, чтобы обновить подбор.',
+          ),
         ),
         const SizedBox(height: 12),
         // Wrapping instead of a fixed-height carousel supports large text and keyboard navigation.
@@ -90,7 +93,7 @@ class AlternativeDatesStrip extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(variantCount(day.count)),
                       if (DateUtils.isSameDay(day.date, selectedDate))
-                         Text(tr(context, 'Выбрано')),
+                        Text(tr(context, 'Выбрано')),
                     ],
                   ),
                 ),

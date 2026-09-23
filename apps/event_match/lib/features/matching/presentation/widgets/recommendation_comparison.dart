@@ -54,9 +54,12 @@ class RecommendationComparison extends StatelessWidget {
                 if (onFavorite != null)
                   IconButton(
                     key: ValueKey('favorite-${c.id}'),
-                    tooltip: trNullable(context, isFavorite?.call(c.id) == true
-                        ? 'Сохранено в избранном'
-                        : 'Сохранить в избранное'),
+                    tooltip: trNullable(
+                      context,
+                      isFavorite?.call(c.id) == true
+                          ? 'Сохранено в избранном'
+                          : 'Сохранить в избранное',
+                    ),
                     onPressed: enabled ? () => onFavorite!(c) : null,
                     icon: Icon(
                       isFavorite?.call(c.id) == true
@@ -144,14 +147,20 @@ class RecommendationComparison extends StatelessWidget {
                       contractor: c,
                       explanation: r.explanation,
                       source: r.source,
-                      unchecked: {...r.unchecked, ...?unverified[c.id]}.toList(),
+                      unchecked: {
+                        ...r.unchecked,
+                        ...?unverified[c.id],
+                      }.toList(),
                       recommendation: r,
                     )
                   : null,
               icon: const Icon(Icons.arrow_outward, size: 18),
               label: Text(
                 'Посмотреть профиль',
-                semanticsLabel: trNullable(context, 'Посмотреть профиль ${c.name}'),
+                semanticsLabel: trNullable(
+                  context,
+                  'Посмотреть профиль ${c.name}',
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -175,7 +184,7 @@ class RecommendationComparison extends StatelessWidget {
               TextButton(
                 key: ValueKey('assistant-reject-${c.id}'),
                 onPressed: enabled ? () => onReject!(c) : null,
-                child:  Text(tr(context, 'Не подходит')),
+                child: Text(tr(context, 'Не подходит')),
               ),
             ],
           ],

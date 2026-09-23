@@ -61,7 +61,7 @@ class _ContractorPageState extends State<ContractorPage> {
           message: 'Проверьте подключение и повторите загрузку.',
           action: OutlinedButton(
             onPressed: _refresh,
-            child:  Text(tr(context, 'Повторить')),
+            child: Text(tr(context, 'Повторить')),
           ),
         );
       }
@@ -196,12 +196,12 @@ class _ContractorPageState extends State<ContractorPage> {
                         OutlinedButton.icon(
                           onPressed: () => context.go('/contractor/profile'),
                           icon: const Icon(Icons.edit_outlined),
-                          label:  Text(tr(context, 'Открыть профиль')),
+                          label: Text(tr(context, 'Открыть профиль')),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => context.go('/contractor/calendar'),
                           icon: const Icon(Icons.calendar_month_outlined),
-                          label:  Text(tr(context, 'Подтвердить календарь')),
+                          label: Text(tr(context, 'Подтвердить календарь')),
                         ),
                       ],
                     ),
@@ -230,7 +230,7 @@ class _ContractorPageState extends State<ContractorPage> {
         ? null
         : OutlinedButton(
             onPressed: () => context.go('/contractor/profile'),
-            child:  Text(tr(context, 'Заполнить профиль')),
+            child: Text(tr(context, 'Заполнить профиль')),
           ),
   );
 
@@ -239,7 +239,7 @@ class _ContractorPageState extends State<ContractorPage> {
     child: TextButton.icon(
       onPressed: _refresh,
       icon: const Icon(Icons.refresh),
-      label:  Text(tr(context, 'Обновить статус')),
+      label: Text(tr(context, 'Обновить статус')),
     ),
   );
 
@@ -473,8 +473,11 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           Text(
-            tr(context, 'Можно сохранить незаполненный черновик и вернуться к нему позже.'),
+          Text(
+            tr(
+              context,
+              'Можно сохранить незаполненный черновик и вернуться к нему позже.',
+            ),
           ),
           const SizedBox(height: 24),
           _field(_name, 'Имя или название компании', maxLength: 120),
@@ -483,7 +486,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             child: DropdownButtonFormField<String>(
               initialValue: _city,
               isExpanded: true,
-              decoration:  InputDecoration(labelText: trNullable(context, 'Город')),
+              decoration: InputDecoration(
+                labelText: trNullable(context, 'Город'),
+              ),
               items: eventCities
                   .map(
                     (city) => DropdownMenuItem(value: city, child: Text(city)),
@@ -641,16 +646,18 @@ class _CalendarEditorState extends State<_CalendarEditor> {
       final discard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title:  Text(tr(context, 'Перейти к другому месяцу?')),
-          content:  Text(tr(context, 'Изменения занятых дней ещё не сохранены.')),
+          title: Text(tr(context, 'Перейти к другому месяцу?')),
+          content: Text(
+            tr(context, 'Изменения занятых дней ещё не сохранены.'),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child:  Text(tr(context, 'Остаться')),
+              child: Text(tr(context, 'Остаться')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child:  Text(tr(context, 'Перейти без сохранения')),
+              child: Text(tr(context, 'Перейти без сохранения')),
             ),
           ],
         ),
@@ -730,7 +737,9 @@ class _CalendarEditorState extends State<_CalendarEditor> {
               key: ValueKey(_month),
               initialValue: _month,
               isExpanded: true,
-              decoration:  InputDecoration(labelText: trNullable(context, 'Месяц')),
+              decoration: InputDecoration(
+                labelText: trNullable(context, 'Месяц'),
+              ),
               items:
                   List.generate(
                         13,
@@ -760,8 +769,11 @@ class _CalendarEditorState extends State<_CalendarEditor> {
                 positive: _stored?.isFresh(DateTime.now()) ?? false,
               ),
               const SizedBox(height: 16),
-               Text(
-                tr(context, 'Выбранные дни — заняты. Все остальные — доступны по вашему календарю.'),
+              Text(
+                tr(
+                  context,
+                  'Выбранные дни — заняты. Все остальные — доступны по вашему календарю.',
+                ),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -805,11 +817,17 @@ class _CalendarEditorState extends State<_CalendarEditor> {
                         _error != null && _stored == null
                     ? null
                     : (value) => setState(() => _confirmed = value ?? false),
-                title:  Text(
-                  tr(context, 'Подтверждаю доступность всех неотмеченных дней этого месяца'),
+                title: Text(
+                  tr(
+                    context,
+                    'Подтверждаю доступность всех неотмеченных дней этого месяца',
+                  ),
                 ),
-                subtitle:  Text(
-                  tr(context, 'Это информация для подбора, без обещания бронирования.'),
+                subtitle: Text(
+                  tr(
+                    context,
+                    'Это информация для подбора, без обещания бронирования.',
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -829,7 +847,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
               if (!_dirty)
                 OutlinedButton(
                   onPressed: _load,
-                  child:  Text(tr(context, 'Повторить загрузку')),
+                  child: Text(tr(context, 'Повторить загрузку')),
                 ),
             ],
           ],

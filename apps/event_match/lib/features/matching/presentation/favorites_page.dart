@@ -81,7 +81,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title:  Text(tr(context, 'Избранное')),
+        title: Text(tr(context, 'Избранное')),
         actions: [
           IconButton(
             autofocus: true,
@@ -112,15 +112,18 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
-                     Text(
-                      tr(context, 'Ведущие, фотографы и площадки — в одной папке. Сохранено на этом устройстве.'),
+                    Text(
+                      tr(
+                        context,
+                        'Ведущие, фотографы и площадки — в одной папке. Сохранено на этом устройстве.',
+                      ),
                     ),
                     const SizedBox(height: 24),
                     if (controller.loadError != null) ...[
                       Text(controller.loadError!),
                       TextButton(
                         onPressed: controller.load,
-                        child:  Text(tr(context, 'Повторить загрузку')),
+                        child: Text(tr(context, 'Повторить загрузку')),
                       ),
                     ] else if (controller.folders.isEmpty)
                       const Padding(
@@ -214,7 +217,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   ),
                                 ],
                                 const SizedBox(height: 12),
-                                 Text(tr(context, 'Открыть папку →')),
+                                Text(tr(context, 'Открыть папку →')),
                               ],
                             ),
                           ),
@@ -272,23 +275,25 @@ class FavoriteFolderPage extends StatelessWidget {
     final value = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title:  Text(tr(context, 'Название папки')),
+        title: Text(tr(context, 'Название папки')),
         content: TextFormField(
           initialValue: name,
           onChanged: (value) => name = value,
           autofocus: true,
           maxLength: 80,
-          decoration:  InputDecoration(labelText: trNullable(context, 'Название')),
+          decoration: InputDecoration(
+            labelText: trNullable(context, 'Название'),
+          ),
           onFieldSubmitted: (value) => Navigator.pop(context, value),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child:  Text(tr(context, 'Отмена')),
+            child: Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, name),
-            child:  Text(tr(context, 'Сохранить')),
+            child: Text(tr(context, 'Сохранить')),
           ),
         ],
       ),
@@ -302,18 +307,18 @@ class FavoriteFolderPage extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title:  Text(tr(context, 'Удалить папку?')),
+        title: Text(tr(context, 'Удалить папку?')),
         content: Text(
           '«${folder.name}» и сохранённые в ней ссылки будут удалены с этого устройства.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child:  Text(tr(context, 'Отмена')),
+            child: Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child:  Text(tr(context, 'Удалить')),
+            child: Text(tr(context, 'Удалить')),
           ),
         ],
       ),
@@ -364,7 +369,7 @@ class FavoriteFolderPage extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back),
           ),
-          title:  Text(tr(context, 'Папка избранного')),
+          title: Text(tr(context, 'Папка избранного')),
           actions: [
             if (folder != null)
               PopupMenuButton<String>(
@@ -402,13 +407,19 @@ class FavoriteFolderPage extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
-                     Text(
-                      tr(context, 'Избранное не бронирует дату. Доступность показана по текущему каталогу.'),
+                    Text(
+                      tr(
+                        context,
+                        'Избранное не бронирует дату. Доступность показана по текущему каталогу.',
+                      ),
                     ),
                     const SizedBox(height: 24),
                     if (folder.entries.isEmpty)
-                       Text(
-                        tr(context, 'В папке пока пусто. Добавьте подрядчика сердечком из каталога или подбора.'),
+                      Text(
+                        tr(
+                          context,
+                          'В папке пока пусто. Добавьте подрядчика сердечком из каталога или подбора.',
+                        ),
                       ),
                     for (final entry in folder.entries) ...[
                       if (byId[entry.contractorId] case final contractor?) ...[
@@ -463,7 +474,7 @@ class FavoriteFolderPage extends StatelessWidget {
                             ),
                             onPressed: () => onRestoreSearch(request),
                             icon: const Icon(Icons.search),
-                            label:  Text(tr(context, 'Повторить этот поиск')),
+                            label: Text(tr(context, 'Повторить этот поиск')),
                           ),
                         ),
                       ],

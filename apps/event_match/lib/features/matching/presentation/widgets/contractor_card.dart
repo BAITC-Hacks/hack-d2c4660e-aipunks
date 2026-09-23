@@ -96,11 +96,13 @@ class ContractorCard extends StatelessWidget {
                 trailing: onFavorite != null || isFavorite
                     ? IconButton(
                         key: ValueKey('favorite-${c.id}'),
-                        tooltip:
-                            trNullable(context, favoriteTooltip ??
-                            (isFavorite
-                                ? 'Сохранено в избранном'
-                                : 'Сохранить в избранное')),
+                        tooltip: trNullable(
+                          context,
+                          favoriteTooltip ??
+                              (isFavorite
+                                  ? 'Сохранено в избранном'
+                                  : 'Сохранить в избранное'),
+                        ),
                         isSelected: isFavorite,
                         onPressed: favoriteBusy ? null : onFavorite,
                         style: IconButton.styleFrom(
@@ -210,7 +212,7 @@ class ContractorCard extends StatelessWidget {
                     recommendation: recommendation,
                   ),
                   icon: const Icon(Icons.arrow_outward, size: 18),
-                  label:  Text(tr(context, 'Посмотреть профиль')),
+                  label: Text(tr(context, 'Посмотреть профиль')),
                 ),
                 const SizedBox(height: 8),
                 Tooltip(

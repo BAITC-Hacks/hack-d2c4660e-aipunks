@@ -135,12 +135,17 @@ class _AuthPageState extends State<AuthPage> {
                 enabled: !_busy,
                 textCapitalization: TextCapitalization.words,
                 autofillHints: const [AutofillHints.name],
-                decoration:  InputDecoration(labelText: trNullable(context, 'Как вас зовут')),
-                validator: localizeValidator(context, (value) => value == null || value.trim().isEmpty
-                    ? 'Введите имя'
-                    : value.trim().length > 100
-                    ? 'Не больше 100 символов'
-                    : null),
+                decoration: InputDecoration(
+                  labelText: trNullable(context, 'Как вас зовут'),
+                ),
+                validator: localizeValidator(
+                  context,
+                  (value) => value == null || value.trim().isEmpty
+                      ? 'Введите имя'
+                      : value.trim().length > 100
+                      ? 'Не больше 100 символов'
+                      : null,
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -150,14 +155,19 @@ class _AuthPageState extends State<AuthPage> {
               enabled: !_busy,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
-              decoration:  InputDecoration(labelText: trNullable(context, 'Email')),
-              validator: localizeValidator(context, (value) =>
-                  value == null ||
-                      !RegExp(
-                        r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                      ).hasMatch(value.trim())
-                  ? 'Введите корректный email'
-                  : null),
+              decoration: InputDecoration(
+                labelText: trNullable(context, 'Email'),
+              ),
+              validator: localizeValidator(
+                context,
+                (value) =>
+                    value == null ||
+                        !RegExp(
+                          r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                        ).hasMatch(value.trim())
+                    ? 'Введите корректный email'
+                    : null,
+              ),
             ),
             if (!_reset) ...[
               const SizedBox(height: 16),
@@ -173,9 +183,15 @@ class _AuthPageState extends State<AuthPage> {
                 ],
                 decoration: InputDecoration(
                   labelText: trNullable(context, 'Пароль'),
-                  helperText: trNullable(context, _register ? 'Не менее 8 символов' : null),
+                  helperText: trNullable(
+                    context,
+                    _register ? 'Не менее 8 символов' : null,
+                  ),
                   suffixIcon: IconButton(
-                    tooltip: trNullable(context, _obscure ? 'Показать пароль' : 'Скрыть пароль'),
+                    tooltip: trNullable(
+                      context,
+                      _obscure ? 'Показать пароль' : 'Скрыть пароль',
+                    ),
                     onPressed: () => setState(() => _obscure = !_obscure),
                     icon: Icon(
                       _obscure
@@ -184,11 +200,14 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                 ),
-                validator: localizeValidator(context, (value) => value == null || value.isEmpty
-                    ? 'Введите пароль'
-                    : _register && value.length < 8
-                    ? 'Не менее 8 символов'
-                    : null),
+                validator: localizeValidator(
+                  context,
+                  (value) => value == null || value.isEmpty
+                      ? 'Введите пароль'
+                      : _register && value.length < 8
+                      ? 'Не менее 8 символов'
+                      : null,
+                ),
                 onFieldSubmitted: (_) {
                   if (!_busy) _submit();
                 },
@@ -218,7 +237,7 @@ class _AuthPageState extends State<AuthPage> {
                       ? null
                       : () => _run(widget.auth.signInWithGoogle),
                   icon: const Icon(Icons.account_circle_outlined),
-                  label:  Text(tr(context, 'Продолжить с Google')),
+                  label: Text(tr(context, 'Продолжить с Google')),
                 ),
               const SizedBox(height: 8),
               TextButton(
@@ -244,7 +263,7 @@ class _AuthPageState extends State<AuthPage> {
                           _error = null;
                           _message = null;
                         }),
-                  child:  Text(tr(context, 'Забыли пароль?')),
+                  child: Text(tr(context, 'Забыли пароль?')),
                 ),
             ] else
               TextButton(
@@ -255,12 +274,12 @@ class _AuthPageState extends State<AuthPage> {
                         _error = null;
                         _message = null;
                       }),
-                child:  Text(tr(context, 'Вернуться ко входу')),
+                child: Text(tr(context, 'Вернуться ко входу')),
               ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _busy ? null : () => context.go('/'),
-              child:  Text(tr(context, 'Продолжить просмотр каталога')),
+              child: Text(tr(context, 'Продолжить просмотр каталога')),
             ),
           ],
         ),
@@ -328,17 +347,17 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   widget.auth.sendVerification,
                   'Письмо отправлено повторно. Проверьте также папку «Спам».',
                 ),
-          child:  Text(tr(context, 'Отправить письмо ещё раз')),
+          child: Text(tr(context, 'Отправить письмо ещё раз')),
         ),
         TextButton(
           onPressed: _busy
               ? null
               : () => _run(widget.auth.signOut, 'Вы вышли из аккаунта.'),
-          child:  Text(tr(context, 'Войти в другой аккаунт')),
+          child: Text(tr(context, 'Войти в другой аккаунт')),
         ),
         TextButton(
           onPressed: () => context.go('/'),
-          child:  Text(tr(context, 'Вернуться в каталог')),
+          child: Text(tr(context, 'Вернуться в каталог')),
         ),
       ],
     ),

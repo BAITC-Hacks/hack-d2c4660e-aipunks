@@ -242,14 +242,17 @@ class _MessagesPanelState extends State<MessagesPanel> {
                 children: [
                   const Icon(Icons.forum_outlined, size: 48),
                   const SizedBox(height: 16),
-                   Text(
-                    tr(context, 'Войдите, чтобы написать подрядчику и сохранить переписку.'),
+                  Text(
+                    tr(
+                      context,
+                      'Войдите, чтобы написать подрядчику и сохранить переписку.',
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
                   FilledButton(
                     onPressed: widget.onSignIn,
-                    child:  Text(tr(context, 'Войти в аккаунт')),
+                    child: Text(tr(context, 'Войти в аккаунт')),
                   ),
                 ],
               ),
@@ -263,10 +266,13 @@ class _MessagesPanelState extends State<MessagesPanel> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Text(_error!, semanticsLabel: trNullable(context, _error)),
+                      Text(
+                        _error!,
+                        semanticsLabel: trNullable(context, _error),
+                      ),
                       TextButton(
                         onPressed: _refresh,
-                        child:  Text(tr(context, 'Повторить')),
+                        child: Text(tr(context, 'Повторить')),
                       ),
                     ],
                   ),
@@ -355,8 +361,11 @@ class _MessagesPanelState extends State<MessagesPanel> {
                             minLines: 1,
                             maxLines: 4,
                             maxLength: 4000,
-                            decoration:  InputDecoration(
-                              labelText: trNullable(context, 'Сообщение подрядчику'),
+                            decoration: InputDecoration(
+                              labelText: trNullable(
+                                context,
+                                'Сообщение подрядчику',
+                              ),
                               counterText: '',
                             ),
                           ),

@@ -48,7 +48,7 @@ class SelectionOverview extends StatelessWidget {
           key: ValueKey('selection-method-${presentation.summary}'),
           tilePadding: EdgeInsets.zero,
           childrenPadding: const EdgeInsets.only(bottom: 16),
-          title:  Text(tr(context, 'Как мы подобрали')),
+          title: Text(tr(context, 'Как мы подобрали')),
           children: [
             Align(
               alignment: Alignment.centerLeft,

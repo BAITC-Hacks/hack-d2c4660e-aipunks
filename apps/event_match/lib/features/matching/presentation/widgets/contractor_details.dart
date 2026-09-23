@@ -162,8 +162,11 @@ class ContractorDetails extends StatelessWidget {
                               ),
                             ),
                           if (recommendation!.equivalent)
-                             Text(
-                              tr(context, 'В данных недостаточно отличий — не считаем этот вариант уникально лучшим.'),
+                            Text(
+                              tr(
+                                context,
+                                'В данных недостаточно отличий — не считаем этот вариант уникально лучшим.',
+                              ),
                             ),
                         ],
                       ),
@@ -183,9 +186,19 @@ class ContractorDetails extends StatelessWidget {
                               : 'Анонимизированный профиль',
                         ),
                         if (c.priceImputed)
-                           Text(tr(context, 'Цена заполнена при подготовке датасета')),
+                          Text(
+                            tr(
+                              context,
+                              'Цена заполнена при подготовке датасета',
+                            ),
+                          ),
                         if (c.cityImputed)
-                           Text(tr(context, 'Город заполнен при подготовке датасета')),
+                          Text(
+                            tr(
+                              context,
+                              'Город заполнен при подготовке датасета',
+                            ),
+                          ),
                         const SizedBox(height: 8),
                         Text(
                           c.isLive
@@ -222,7 +235,7 @@ class ContractorDetails extends StatelessWidget {
                                     context,
                                   )!.openMessages(context, c),
                             icon: const Icon(Icons.chat_bubble_outline),
-                            label:  Text(tr(context, 'Написать подрядчику')),
+                            label: Text(tr(context, 'Написать подрядчику')),
                           ),
                         ],
                       ),

@@ -16,13 +16,15 @@ class AppLanguage extends ValueNotifier<Locale> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final code = prefs.getString(preferenceKey);
-      if (revision == _revision && supported.any((l) => l.languageCode == code)) {
+      if (revision == _revision &&
+          supported.any((l) => l.languageCode == code)) {
         value = Locale(code!);
       }
     } catch (_) {
       // Language remains usable when local storage is unavailable.
     }
   }
+
   Future<void> select(String code) async {
     if (!supported.any((l) => l.languageCode == code)) return;
     _revision++;
@@ -34,21 +36,36 @@ class AppLanguage extends ValueNotifier<Locale> {
   }
 }
 
-String tr(BuildContext context, String source) =>
-    translate(source, (Localizations.maybeLocaleOf(context) ?? AppLanguage.instance.value).languageCode);
+String tr(BuildContext context, String source) => translate(
+  source,
+  (Localizations.maybeLocaleOf(context) ?? AppLanguage.instance.value)
+      .languageCode,
+);
 String? trNullable(BuildContext context, String? source) =>
     source == null ? null : tr(context, source);
-FormFieldValidator<T>? localizeValidator<T>(BuildContext context, FormFieldValidator<T>? validator) =>
+FormFieldValidator<T>? localizeValidator<T>(
+  BuildContext context,
+  FormFieldValidator<T>? validator,
+) =>
     validator == null ? null : (value) => trNullable(context, validator(value));
 
-final _templates = messages.entries.where((e) => e.key.contains(RegExp(r'\{\d+\}'))).map((e) {
-  final parts = e.key.split(RegExp(r'\{\d+\}'));
-  return (source: e.key, pattern: RegExp('^${parts.map(RegExp.escape).join('(.*?)')}\$', dotAll: true), values: e.value,
-    weight: parts.join().length);
-}).toList()..sort((a,b) => b.weight.compareTo(a.weight));
+final _templates =
+    messages.entries.where((e) => e.key.contains(RegExp(r'\{\d+\}'))).map((e) {
+      final parts = e.key.split(RegExp(r'\{\d+\}'));
+      return (
+        source: e.key,
+        pattern: RegExp(
+          '^${parts.map(RegExp.escape).join('(.*?)')}\$',
+          dotAll: true,
+        ),
+        values: e.value,
+        weight: parts.join().length,
+      );
+    }).toList()..sort((a, b) => b.weight.compareTo(a.weight));
 
 String translate(String source, String language, {bool templates = true}) {
-  if (language == 'ru' || !['en','kk'].contains(language) || source.isEmpty) return source;
+  if (language == 'ru' || !['en', 'kk'].contains(language) || source.isEmpty)
+    return source;
   final index = language == 'en' ? 0 : 1;
   final exact = messages[source];
   if (exact != null) return exact[index];
@@ -65,7 +82,10 @@ String translate(String source, String language, {bool templates = true}) {
   // Composed labels (category, city, language, dates) use canonical values.
   for (final separator in [' · ', ', ', '\n']) {
     if (source.contains(separator)) {
-      return source.split(separator).map((part) => translate(part, language, templates: false)).join(separator);
+      return source
+          .split(separator)
+          .map((part) => translate(part, language, templates: false))
+          .join(separator);
     }
   }
   return source;
@@ -82,19 +102,33 @@ class LanguagePicker extends StatelessWidget {
       initialValue: code,
       onSelected: AppLanguage.instance.select,
       itemBuilder: (_) => [
-        for (final entry in const {'ru':'Русский', 'en':'English', 'kk':'Қазақша'}.entries)
-          CheckedPopupMenuItem(value: entry.key, checked: code == entry.key, child: Text(entry.value)),
+        for (final entry in const {
+          'ru': 'Русский',
+          'en': 'English',
+          'kk': 'Қазақша',
+        }.entries)
+          CheckedPopupMenuItem(
+            value: entry.key,
+            checked: code == entry.key,
+            child: Text(entry.value),
+          ),
       ],
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.language, size: 20),
-          if (MediaQuery.sizeOf(context).width >= 600) ...[
-          const SizedBox(width: 6),
-          Text(code == 'kk' ? 'ҚАЗ' : code.toUpperCase(), style: Theme.of(context).textTheme.labelLarge),
-          const Icon(Icons.expand_more, size: 16),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.language, size: 20),
+            if (MediaQuery.sizeOf(context).width >= 600) ...[
+              const SizedBox(width: 6),
+              Text(
+                code == 'kk' ? 'ҚАЗ' : code.toUpperCase(),
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const Icon(Icons.expand_more, size: 16),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }

@@ -199,7 +199,7 @@ class _OrderFiltersState extends State<OrderFilters> {
           key: const Key('budget-input'),
           controller: budget,
           keyboardType: TextInputType.number,
-          decoration:  InputDecoration(
+          decoration: InputDecoration(
             labelText: trNullable(context, 'Бюджет, ₸'),
             helperText: trNullable(context, 'На одного подрядчика'),
             errorMaxLines: 3,
@@ -224,7 +224,7 @@ class _OrderFiltersState extends State<OrderFilters> {
           key: const Key('hours-input'),
           controller: hours,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration:  InputDecoration(
+          decoration: InputDecoration(
             labelText: trNullable(context, 'Длительность, ч'),
             helperText: trNullable(context, 'Необязательно'),
             errorMaxLines: 3,
@@ -249,8 +249,11 @@ class _OrderFiltersState extends State<OrderFilters> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-           Text(
-            tr(context, 'Уточните условия — подберём до трёх подрядчиков. Изменения применяются только по кнопке.'),
+          Text(
+            tr(
+              context,
+              'Уточните условия — подберём до трёх подрядчиков. Изменения применяются только по кнопке.',
+            ),
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -301,7 +304,7 @@ class _OrderFiltersState extends State<OrderFilters> {
         key: const Key('apply-filters'),
         onPressed: apply,
         icon: const Icon(Icons.check, size: 18),
-        label:  Text(tr(context, 'Применить и подобрать')),
+        label: Text(tr(context, 'Применить и подобрать')),
       ),
     ],
   );

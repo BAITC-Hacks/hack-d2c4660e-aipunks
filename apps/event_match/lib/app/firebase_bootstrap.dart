@@ -190,7 +190,7 @@ class _FirebaseBootstrapState extends State<FirebaseBootstrap> {
         if (_demo)
           TextButton(
             onPressed: _retry,
-            child:  Text(tr(context, 'Вернуться ко входу')),
+            child: Text(tr(context, 'Вернуться ко входу')),
           ),
       ],
     ),
@@ -208,7 +208,7 @@ class _FirebaseBootstrapState extends State<FirebaseBootstrap> {
                     if (!snapshot.hasError) ...[
                       const Center(child: CircularProgressIndicator()),
                       const SizedBox(height: 24),
-                       Text(
+                      Text(
                         tr(context, 'Подключаем Event Match…'),
                         textAlign: TextAlign.center,
                       ),
@@ -227,12 +227,12 @@ class _FirebaseBootstrapState extends State<FirebaseBootstrap> {
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: _retry,
-                        child:  Text(tr(context, 'Повторить')),
+                        child: Text(tr(context, 'Повторить')),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: () => setState(() => _demo = true),
-                        child:  Text(tr(context, 'Открыть демо-каталог')),
+                        child: Text(tr(context, 'Открыть демо-каталог')),
                       ),
                     ],
                   ],

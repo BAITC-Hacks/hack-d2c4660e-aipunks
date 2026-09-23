@@ -145,7 +145,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   void showHelp() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title:  Text(tr(context, 'От события — к вашей команде')),
+      title: Text(tr(context, 'От события — к вашей команде')),
       content: const SingleChildScrollView(
         child: Text(
           '1. Посмотрите каталог и выберите категорию.\n\n'
@@ -157,7 +157,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child:  Text(tr(context, 'Понятно')),
+          child: Text(tr(context, 'Понятно')),
         ),
       ],
     ),
@@ -216,7 +216,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
     if (changed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:  Text(tr(context, 'Избранное обновлено')),
+          content: Text(tr(context, 'Избранное обновлено')),
           action: SnackBarAction(label: 'Открыть', onPressed: openFavorites),
         ),
       );
@@ -450,11 +450,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
               OutlinedButton.icon(
                 onPressed: () => widget.onOpenAssistant?.call(null),
                 icon: const Icon(Icons.auto_awesome_outlined),
-                label:  Text(tr(context, 'Уточнить с помощником')),
+                label: Text(tr(context, 'Уточнить с помощником')),
               ),
               TextButton(
                 onPressed: browseCatalog,
-                child:  Text(tr(context, 'Вернуться в каталог')),
+                child: Text(tr(context, 'Вернуться в каталог')),
               ),
             ],
           ),
@@ -476,7 +476,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         controller.error!,
         action: TextButton(
           onPressed: controller.load,
-          child:  Text(tr(context, 'Повторить загрузку')),
+          child: Text(tr(context, 'Повторить загрузку')),
         ),
       );
     }
@@ -495,7 +495,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         controller.searchError!,
         action: TextButton(
           onPressed: () => _search(controller.lastRequest!),
-          child:  Text(tr(context, 'Повторить подбор')),
+          child: Text(tr(context, 'Повторить подбор')),
         ),
       );
     }
@@ -514,7 +514,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 ? null
                 : OutlinedButton(
                     onPressed: openFilters,
-                    child:  Text(tr(context, 'Изменить условия')),
+                    child: Text(tr(context, 'Изменить условия')),
                   ),
           ),
           const SizedBox(height: 24),
@@ -582,8 +582,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
         cardList(browsed.take(visibleCount).toList()),
         if (summaryFailed && aiEnabled) ...[
           const SizedBox(height: 16),
-           Text(
-            tr(context, 'Часть AI-сводок недоступна. Показаны исходные описания из каталога.'),
+          Text(
+            tr(
+              context,
+              'Часть AI-сводок недоступна. Показаны исходные описания из каталога.',
+            ),
           ),
           Align(
             alignment: Alignment.centerLeft,
@@ -592,7 +595,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 summaryFailed = false;
                 summaryAttempts.removeWhere((id) => !summaries.containsKey(id));
               }),
-              child:  Text(tr(context, 'Повторить загрузку объяснений')),
+              child: Text(tr(context, 'Повторить загрузку объяснений')),
             ),
           ),
         ],
@@ -607,7 +610,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
           Center(
             child: OutlinedButton(
               onPressed: () => setState(() => visibleCount += 12),
-              child:  Text(tr(context, 'Показать ещё')),
+              child: Text(tr(context, 'Показать ещё')),
             ),
           ),
         ],
@@ -706,7 +709,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         key: const Key('reset-filters'),
         onPressed: controller.clearResult,
         icon: const Icon(Icons.close, size: 18),
-        label:  Text(tr(context, 'Сбросить фильтры')),
+        label: Text(tr(context, 'Сбросить фильтры')),
       ),
       const SizedBox(height: 24),
     ],
@@ -865,9 +868,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
     padding: const EdgeInsets.only(bottom: 20),
     child: SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title:  Text(tr(context, 'Объяснения от ИИ')),
-      subtitle:  Text(
-        tr(context, 'Коротко о подрядчике. Без сети остаются исходные описания.'),
+      title: Text(tr(context, 'Объяснения от ИИ')),
+      subtitle: Text(
+        tr(
+          context,
+          'Коротко о подрядчике. Без сети остаются исходные описания.',
+        ),
       ),
       value: aiEnabled,
       onChanged: controller.status == SearchStatus.searching
@@ -907,7 +913,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               leading: const Icon(Icons.tune),
-              title:  Text(tr(context, 'Расширенные фильтры')),
+              title: Text(tr(context, 'Расширенные фильтры')),
               subtitle: Text(
                 controller.lastRequest == null
                     ? 'Город, дата, бюджет, язык и длительность'
@@ -958,12 +964,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
             TextButton.icon(
               onPressed: showHelp,
               icon: const Icon(Icons.help_outline, size: 18),
-              label:  Text(tr(context, 'Как это работает')),
+              label: Text(tr(context, 'Как это работает')),
             ),
           ],
         ),
         const SizedBox(height: 12),
-         Text(
+        Text(
           tr(context, 'Сделано для особенных событий в Казахстане.'),
           style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
@@ -1010,12 +1016,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
                     if (desktop) ...[
                       TextButton(
                         onPressed: browseCatalog,
-                        child:  Text(tr(context, 'Каталог специалистов')),
+                        child: Text(tr(context, 'Каталог специалистов')),
                       ),
                       const SizedBox(width: 8),
                       TextButton(
                         onPressed: showHelp,
-                        child:  Text(tr(context, 'Как это работает')),
+                        child: Text(tr(context, 'Как это работает')),
                       ),
                       const SizedBox(width: 12),
                       const Icon(
@@ -1024,7 +1030,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         color: AppColors.muted,
                       ),
                       const SizedBox(width: 5),
-                       Text(
+                      Text(
                         tr(context, 'Казахстан'),
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
@@ -1055,7 +1061,10 @@ class _MatchingScreenState extends State<MatchingScreen> {
                           icon: const Icon(Icons.chat_bubble_outline),
                         ),
                       PopupMenuButton<String>(
-                        tooltip: trNullable(context, 'Кабинеты и живой каталог'),
+                        tooltip: trNullable(
+                          context,
+                          'Кабинеты и живой каталог',
+                        ),
                         icon: const Icon(Icons.person_outline),
                         onSelected: (v) {
                           switch (v) {

@@ -196,7 +196,7 @@ class _CatalogPageState extends State<CatalogPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:  Text(tr(context, 'Подборка сохранена')),
+          content: Text(tr(context, 'Подборка сохранена')),
           action: SnackBarAction(
             label: 'Открыть',
             onPressed: () => context.go('/client/selections'),
@@ -261,13 +261,16 @@ class _CatalogPageState extends State<CatalogPage> {
               message: restorationError!,
               action: OutlinedButton(
                 onPressed: _restoreAction,
-                child:  Text(tr(context, 'Повторить действие')),
+                child: Text(tr(context, 'Повторить действие')),
               ),
             ),
           ],
           const SizedBox(height: 24),
-           Text(
-            tr(context, 'Живой каталог · карточки проходят проверку. Подбор учитывает только актуальный календарь.'),
+          Text(
+            tr(
+              context,
+              'Живой каталог · карточки проходят проверку. Подбор учитывает только актуальный календарь.',
+            ),
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -294,12 +297,12 @@ class _CatalogPageState extends State<CatalogPage> {
                         controller.load();
                       },
                 icon: const Icon(Icons.refresh),
-                label:  Text(tr(context, 'Обновить каталог')),
+                label: Text(tr(context, 'Обновить каталог')),
               ),
               if (request != null)
                 TextButton(
                   onPressed: controller.clearResult,
-                  child:  Text(tr(context, 'Сбросить условия')),
+                  child: Text(tr(context, 'Сбросить условия')),
                 ),
             ],
           ),
@@ -312,7 +315,7 @@ class _CatalogPageState extends State<CatalogPage> {
           ] else ...[
             TextField(
               controller: queryInput,
-              decoration:  InputDecoration(
+              decoration: InputDecoration(
                 labelText: trNullable(context, 'Имя подрядчика или город'),
                 prefixIcon: Icon(Icons.search),
               ),
@@ -347,7 +350,7 @@ class _CatalogPageState extends State<CatalogPage> {
               message: controller.error!,
               action: TextButton(
                 onPressed: controller.load,
-                child:  Text(tr(context, 'Повторить')),
+                child: Text(tr(context, 'Повторить')),
               ),
             )
           else if (controller.searchError != null)
@@ -356,7 +359,7 @@ class _CatalogPageState extends State<CatalogPage> {
               message: controller.searchError!,
               action: TextButton(
                 onPressed: () => controller.search(request!),
-                child:  Text(tr(context, 'Повторить')),
+                child: Text(tr(context, 'Повторить')),
               ),
             )
           else if (result != null) ...[
@@ -397,7 +400,7 @@ class _CatalogPageState extends State<CatalogPage> {
                 padding: const EdgeInsets.only(top: 20),
                 child: OutlinedButton(
                   onPressed: () => setState(() => visible += 12),
-                  child:  Text(tr(context, 'Показать ещё')),
+                  child: Text(tr(context, 'Показать ещё')),
                 ),
               ),
           ],
@@ -427,7 +430,7 @@ class _ChooseEventDialogState extends State<_ChooseEventDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title:  Text(tr(context, 'Сохранить в мероприятие')),
+    title: Text(tr(context, 'Сохранить в мероприятие')),
     content: SingleChildScrollView(
       child: Form(
         key: form,
@@ -439,7 +442,9 @@ class _ChooseEventDialogState extends State<_ChooseEventDialog> {
               DropdownButtonFormField<String>(
                 initialValue: selected,
                 isExpanded: true,
-                decoration:  InputDecoration(labelText: trNullable(context, 'Мероприятие')),
+                decoration: InputDecoration(
+                  labelText: trNullable(context, 'Мероприятие'),
+                ),
                 items: [
                   const DropdownMenuItem(
                     value: '',
@@ -460,14 +465,19 @@ class _ChooseEventDialogState extends State<_ChooseEventDialog> {
                 TextFormField(
                   controller: name,
                   maxLength: 120,
-                  decoration:  InputDecoration(
+                  decoration: InputDecoration(
                     labelText: trNullable(context, 'Название мероприятия'),
                   ),
-                  validator: localizeValidator(context, (v) =>
-                      (v ?? '').trim().isEmpty ? 'Укажите название' : null),
+                  validator: localizeValidator(
+                    context,
+                    (v) => (v ?? '').trim().isEmpty ? 'Укажите название' : null,
+                  ),
                 ),
-               Text(
-                tr(context, 'Показываем мероприятия с теми же городом, датой и форматом.'),
+              Text(
+                tr(
+                  context,
+                  'Показываем мероприятия с теми же городом, датой и форматом.',
+                ),
               ),
             ],
           ),
@@ -477,7 +487,7 @@ class _ChooseEventDialogState extends State<_ChooseEventDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child:  Text(tr(context, 'Отмена')),
+        child: Text(tr(context, 'Отмена')),
       ),
       FilledButton(
         onPressed: () {
@@ -495,7 +505,7 @@ class _ChooseEventDialogState extends State<_ChooseEventDialog> {
                   ),
           );
         },
-        child:  Text(tr(context, 'Сохранить')),
+        child: Text(tr(context, 'Сохранить')),
       ),
     ],
   );

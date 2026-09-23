@@ -76,7 +76,9 @@ class _EventMatchAppState extends State<EventMatchApp> {
     }
   }
 
-  void _languageChanged() { if (mounted) setState(() {}); }
+  void _languageChanged() {
+    if (mounted) setState(() {});
+  }
 
   void _identityChanged() {
     if (_assistantUid != widget.session?.uid) {
@@ -99,7 +101,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
         body: Center(
           child: FilledButton(
             onPressed: () => context.go('/'),
-            child:  Text(tr(context, 'Страница не найдена. Открыть каталог')),
+            child: Text(tr(context, 'Страница не найдена. Открыть каталог')),
           ),
         ),
       ),
@@ -334,7 +336,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
     key: const Key('assistant-panel'),
     appBar: AppBar(
       automaticallyImplyLeading: false,
-      title:  Text(tr(context, 'ИИ-помощник')),
+      title: Text(tr(context, 'ИИ-помощник')),
       actions: [
         IconButton(
           autofocus: true,
@@ -469,17 +471,17 @@ class _PublicFrame extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () => context.go('/catalog'),
-                    child:  Text(tr(context, 'Опубликованные подрядчики')),
+                    child: Text(tr(context, 'Опубликованные подрядчики')),
                   ),
                   TextButton(
                     onPressed: () => context.go('/demo'),
-                    child:  Text(tr(context, 'Демо-каталог')),
+                    child: Text(tr(context, 'Демо-каталог')),
                   ),
                   TextButton(
                     onPressed: () => CommunicationScope.maybeOf(
                       context,
                     )?.openAssistant(context),
-                    child:  Text(tr(context, 'ИИ-помощник')),
+                    child: Text(tr(context, 'ИИ-помощник')),
                   ),
                   FilledButton.tonal(
                     onPressed: () => context.go(
@@ -505,8 +507,11 @@ class _PublicFrame extends StatelessWidget {
               width: double.infinity,
               color: Theme.of(context).colorScheme.secondaryContainer,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child:  Text(
-                tr(context, 'Демонстрационные анкеты и даты 23.09–31.12.2026. Они не принадлежат зарегистрированным подрядчикам.'),
+              child: Text(
+                tr(
+                  context,
+                  'Демонстрационные анкеты и даты 23.09–31.12.2026. Они не принадлежат зарегистрированным подрядчикам.',
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -544,16 +549,16 @@ class _SessionStatePage extends StatelessWidget {
           if (!session.loading && !restricted)
             FilledButton(
               onPressed: session.retry,
-              child:  Text(tr(context, 'Повторить подключение')),
+              child: Text(tr(context, 'Повторить подключение')),
             ),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () => context.go('/'),
-            child:  Text(tr(context, 'Открыть каталог')),
+            child: Text(tr(context, 'Открыть каталог')),
           ),
           TextButton(
             onPressed: session.signOut,
-            child:  Text(tr(context, 'Выйти из аккаунта')),
+            child: Text(tr(context, 'Выйти из аккаунта')),
           ),
         ],
       ),

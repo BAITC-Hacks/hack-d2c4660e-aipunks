@@ -106,7 +106,7 @@ class _AdminPageState extends State<AdminPage> {
           message: 'Проверьте подключение и права доступа.',
           action: OutlinedButton(
             onPressed: _refresh,
-            child:  Text(tr(context, 'Повторить')),
+            child: Text(tr(context, 'Повторить')),
           ),
         );
       }
@@ -134,7 +134,7 @@ class _AdminPageState extends State<AdminPage> {
             child: TextButton.icon(
               onPressed: _refresh,
               icon: const Icon(Icons.refresh),
-              label:  Text(tr(context, 'Обновить данные')),
+              label: Text(tr(context, 'Обновить данные')),
             ),
           ),
           content,
@@ -175,9 +175,12 @@ class _AdminPageState extends State<AdminPage> {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 12),
-               Text(
-                tr(context, 'Проверяйте услуги, цены и деловые контакты по отправленной версии. '
-                'Календарь подрядчик подтверждает самостоятельно.'),
+              Text(
+                tr(
+                  context,
+                  'Проверяйте услуги, цены и деловые контакты по отправленной версии. '
+                  'Календарь подрядчик подтверждает самостоятельно.',
+                ),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -186,11 +189,11 @@ class _AdminPageState extends State<AdminPage> {
                 children: [
                   FilledButton(
                     onPressed: () => context.go('/admin/moderation'),
-                    child:  Text(tr(context, 'Открыть модерацию')),
+                    child: Text(tr(context, 'Открыть модерацию')),
                   ),
                   OutlinedButton(
                     onPressed: () => context.go('/admin/quality'),
-                    child:  Text(tr(context, 'Качество каталога')),
+                    child: Text(tr(context, 'Качество каталога')),
                   ),
                 ],
               ),
@@ -289,7 +292,7 @@ class _AdminPageState extends State<AdminPage> {
                 ),
                 const SizedBox(height: 16),
                 if (published == null)
-                   Text(tr(context, 'Ещё не опубликовано'))
+                  Text(tr(context, 'Ещё не опубликовано'))
                 else
                   ProfileContentDetails(published.content),
               ],
@@ -563,7 +566,7 @@ class _AdminPageState extends State<AdminPage> {
                                 ),
                                 Text(account.email),
                                 if (account.deletionRequested)
-                                   Text(tr(context, 'Запрошено удаление')),
+                                  Text(tr(context, 'Запрошено удаление')),
                               ],
                             ),
                           ),
@@ -607,8 +610,11 @@ class _AdminPageState extends State<AdminPage> {
                         ],
                       ),
                       if (account.deletionRequested)
-                         Text(
-                          tr(context, 'Запрошено полное удаление через служебный инструмент.'),
+                        Text(
+                          tr(
+                            context,
+                            'Запрошено полное удаление через служебный инструмент.',
+                          ),
                         ),
                       const SizedBox(height: 16),
                       _userActions(account, role),
@@ -625,7 +631,9 @@ class _AdminPageState extends State<AdminPage> {
 
   Widget _userActions(Account account, String role) {
     if (account.uid == widget.uid || role == 'admin') {
-      return  Text(tr(context, 'Администратор: изменения через служебный инструмент'));
+      return Text(
+        tr(context, 'Администратор: изменения через служебный инструмент'),
+      );
     }
     return Wrap(
       spacing: 8,
@@ -891,7 +899,7 @@ class _QualityPanelState extends State<_QualityPanel> {
               ),
               const SizedBox(height: 16),
               if (coverage.isEmpty)
-                 Text(tr(context, 'Проверенные карточки ещё не опубликованы.')),
+                Text(tr(context, 'Проверенные карточки ещё не опубликованы.')),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -913,9 +921,12 @@ class _QualityPanelState extends State<_QualityPanel> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
-                 Text(
-                  tr(context, 'Проверка города, категории, даты, бюджета и формата. '
-                  'Язык и длительность здесь не ограничены.'),
+                Text(
+                  tr(
+                    context,
+                    'Проверка города, категории, даты, бюджета и формата. '
+                    'Язык и длительность здесь не ограничены.',
+                  ),
                 ),
                 const SizedBox(height: 24),
                 _select('Город', _city, eventCities, (v) => _city = v),
@@ -929,13 +940,16 @@ class _QualityPanelState extends State<_QualityPanel> {
                 TextFormField(
                   controller: _budget,
                   keyboardType: TextInputType.number,
-                  decoration:  InputDecoration(
+                  decoration: InputDecoration(
                     labelText: trNullable(context, 'Бюджет на категорию, ₸'),
                   ),
                   onChanged: (_) => setState(() => _showDiagnostic = false),
-                  validator: localizeValidator(context, (value) => (int.tryParse(value ?? '') ?? 0) > 0
-                      ? null
-                      : 'Укажите положительный бюджет'),
+                  validator: localizeValidator(
+                    context,
+                    (value) => (int.tryParse(value ?? '') ?? 0) > 0
+                        ? null
+                        : 'Укажите положительный бюджет',
+                  ),
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
@@ -967,7 +981,7 @@ class _QualityPanelState extends State<_QualityPanel> {
                   WorkspaceNotice(_error!, error: true),
                   OutlinedButton(
                     onPressed: _load,
-                    child:  Text(tr(context, 'Повторить')),
+                    child: Text(tr(context, 'Повторить')),
                   ),
                 ] else ...[
                   Text(
@@ -983,7 +997,7 @@ class _QualityPanelState extends State<_QualityPanel> {
                       }
                     },
                     icon: const Icon(Icons.manage_search),
-                    label:  Text(tr(context, 'Проверить кандидатов')),
+                    label: Text(tr(context, 'Проверить кандидатов')),
                   ),
                 ],
               ],

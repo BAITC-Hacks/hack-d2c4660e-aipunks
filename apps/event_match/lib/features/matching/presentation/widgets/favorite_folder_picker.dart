@@ -81,7 +81,7 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
           titlePadding: const EdgeInsets.fromLTRB(28, 28, 28, 20),
           contentPadding: const EdgeInsets.fromLTRB(28, 0, 28, 8),
           actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          title:  Text(tr(context, 'Сохранить в избранное')),
+          title: Text(tr(context, 'Сохранить в избранное')),
           content: SizedBox(
             width: 480,
             child: SingleChildScrollView(
@@ -94,8 +94,11 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                   Text(
-                    tr(context, 'Выберите папку или создайте новую. Папки сохраняются на этом устройстве.'),
+                  Text(
+                    tr(
+                      context,
+                      'Выберите папку или создайте новую. Папки сохраняются на этом устройстве.',
+                    ),
                   ),
                   if (controller.loading)
                     const Padding(
@@ -107,7 +110,7 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     Text(controller.loadError!),
                     TextButton(
                       onPressed: controller.load,
-                      child:  Text(tr(context, 'Повторить загрузку')),
+                      child: Text(tr(context, 'Повторить загрузку')),
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -163,9 +166,12 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     maxLines: 3,
                     textInputAction: TextInputAction.done,
                     enabled: !disabled,
-                    decoration:  InputDecoration(
+                    decoration: InputDecoration(
                       labelText: trNullable(context, 'Новая папка'),
-                      helperText: trNullable(context, 'Название можно изменить'),
+                      helperText: trNullable(
+                        context,
+                        'Название можно изменить',
+                      ),
                       helperMaxLines: 3,
                     ),
                     onSubmitted: disabled
@@ -213,7 +219,7 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
           actions: [
             TextButton(
               onPressed: busy ? null : () => Navigator.pop(context),
-              child:  Text(tr(context, 'Закрыть')),
+              child: Text(tr(context, 'Закрыть')),
             ),
           ],
         ),

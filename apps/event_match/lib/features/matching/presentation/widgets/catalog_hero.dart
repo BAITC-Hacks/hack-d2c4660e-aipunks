@@ -4,11 +4,7 @@ import '../../../../app/design_tokens.dart';
 
 /// The photo sets the atmosphere and is not a contractor's portfolio.
 class CatalogHero extends StatelessWidget {
-  const CatalogHero({
-    super.key,
-    required this.count,
-    required this.onBrowse,
-  });
+  const CatalogHero({super.key, required this.count, required this.onBrowse});
   final int count;
   final VoidCallback onBrowse;
 
@@ -90,8 +86,11 @@ class CatalogHero extends StatelessWidget {
                   SizedBox(height: compact ? 12 : 18),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 450),
-                    child:  Text(
-                      tr(context, 'Ведущий, фотограф, флорист — найдите тех, кто почувствует ваше событие. Подберём по городу, дате и бюджету.'),
+                    child: Text(
+                      tr(
+                        context,
+                        'Ведущий, фотограф, флорист — найдите тех, кто почувствует ваше событие. Подберём по городу, дате и бюджету.',
+                      ),
                       style: TextStyle(
                         fontSize: 14,
                         height: 1.65,
