@@ -1,0 +1,12 @@
+# Local Firebase state and diagnostics
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# Server secrets must never enter source control or Flutter assets.
+.env
+.env.*
+!.env.example
+.secret.local
+**/node_modules/

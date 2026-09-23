@@ -94,8 +94,6 @@ class ContractorCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(c.city, style: theme.textTheme.bodySmall),
                 const SizedBox(height: 16),
                 Text(
                   'от ${money(c.price)} ₸',
@@ -103,7 +101,10 @@ class ContractorCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Text('за мероприятие · цена предварительная', style: theme.textTheme.bodySmall),
+                Text(
+                  'за мероприятие · цена предварительная',
+                  style: theme.textTheme.bodySmall,
+                ),
                 const SizedBox(height: 16),
                 Text('Языки: ${c.languages.join(', ')}'),
                 const SizedBox(height: 8),
@@ -113,7 +114,11 @@ class ContractorCard extends StatelessWidget {
                       : 'Продолжительность: до ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
                 ),
                 const SizedBox(height: 8),
-                Text('Форматы: ${c.formats.join(', ')}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                Text(
+                  'Форматы: ${c.formats.join(', ')}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 16),
                 if (explanation != null)
                   Container(
@@ -155,10 +160,14 @@ class ContractorCard extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Все форматы: ${c.formats.join(', ')}'), const SizedBox(height: 12),
-                          SelectableText(c.description),
-                        ]),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Все форматы: ${c.formats.join(', ')}'),
+                            const SizedBox(height: 12),
+                            SelectableText(c.description),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -171,9 +180,15 @@ class ContractorCard extends StatelessWidget {
                   style: theme.textTheme.labelMedium,
                 ),
                 if (c.priceImputed)
-                  Text('Цена заполнена при подготовке датасета', style: theme.textTheme.bodySmall),
+                  Text(
+                    'Цена заполнена при подготовке датасета',
+                    style: theme.textTheme.bodySmall,
+                  ),
                 if (c.cityImputed)
-                  Text('Город заполнен при подготовке датасета', style: theme.textTheme.bodySmall),
+                  Text(
+                    'Город заполнен при подготовке датасета',
+                    style: theme.textTheme.bodySmall,
+                  ),
               ],
             ),
           ),

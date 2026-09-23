@@ -5,6 +5,8 @@ import '../domain/recommendation_service.dart';
 import 'matching_controller.dart';
 import 'widgets/contractor_card.dart';
 import 'widgets/order_filters.dart';
+import 'widgets/catalog_hero.dart';
+import '../../../app/design_tokens.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({super.key, required this.repository, this.service});
@@ -17,6 +19,133 @@ class MatchingScreen extends StatefulWidget {
 class _MatchingScreenState extends State<MatchingScreen> {
   late final MatchingController controller;
   int visibleCount = 12;
+  String query = '';
+  String browseCategory = 'Все';
+  final searchInput = TextEditingController();
+  final pageScroll = ScrollController();
+
+  List<Contractor> get browsed => controller.catalog
+      .where(
+        (c) =>
+            (browseCategory == 'Все' ||
+                c.categories.contains(browseCategory)) &&
+            (query.isEmpty ||
+                c.name.toLowerCase().contains(query) ||
+                c.city.toLowerCase().contains(query)),
+      )
+      .toList();
+
+  void showHelp() => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('От события — к вашей команде'),
+      content: const SingleChildScrollView(
+        child: Text(
+          '1. Посмотрите каталог и выберите категорию.\n\n'
+          '2. Укажите город, дату, формат и бюджет в фильтрах события.\n\n'
+          '3. Получите до трёх рекомендаций с объяснением. Занятые на вашу дату не попадут в подборку.\n\n'
+          'Цена указана «от». Данные анонимизированы; синтетические профили отмечены. Бронирование пока не предусмотрено.',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Понятно'),
+        ),
+      ],
+    ),
+  );
+
+  Widget sidebar() => Container(
+    width: 228,
+    decoration: const BoxDecoration(
+      color: AppColors.white,
+      border: Border(right: BorderSide(color: AppColors.border)),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: BrandMark(),
+            ),
+            const SizedBox(height: 36),
+            const Text(
+              'ВАШЕ ПРОСТРАНСТВО',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1.5,
+                color: AppColors.muted,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                selected: true,
+                selectedTileColor: AppColors.lavender,
+                leading: const Icon(Icons.grid_view_outlined),
+                title: const Text('Подрядчики'),
+                onTap: () {
+                  controller.clearResult();
+                  searchInput.clear();
+                  setState(() {
+                    query = '';
+                    browseCategory = 'Все';
+                    visibleCount = 12;
+                  });
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                leading: const Icon(Icons.lightbulb_outline),
+                title: const Text('Как это работает'),
+                onTap: showHelp,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.sage,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.favorite_border, color: AppColors.primary),
+                  SizedBox(height: 12),
+                  Text(
+                    'Меньше поиска.\nБольше предвкушения.',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Всё начинается с вашего события.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Сделано для событий в Казахстане',
+              style: TextStyle(fontSize: 11, color: AppColors.muted),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   @override
   void initState() {
@@ -27,6 +156,8 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
   @override
   void dispose() {
+    searchInput.dispose();
+    pageScroll.dispose();
     controller.dispose();
     super.dispose();
   }
@@ -49,7 +180,10 @@ class _MatchingScreenState extends State<MatchingScreen> {
         );
       },
     );
-    if (request != null && mounted) await controller.search(request);
+    if (request != null && mounted) {
+      if (pageScroll.hasClients) pageScroll.jumpTo(0);
+      await controller.search(request);
+    }
   }
 
   Widget message(String title, String text, {Widget? action}) => Container(
@@ -176,14 +310,19 @@ class _MatchingScreenState extends State<MatchingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        cardList(controller.catalog.take(visibleCount).toList()),
+        if (browsed.isEmpty)
+          message(
+            'Ничего не нашлось',
+            'Попробуйте другое имя, город или категорию.',
+          ),
+        cardList(browsed.take(visibleCount).toList()),
         const SizedBox(height: 24),
         Center(
           child: Text(
-            'Показано ${controller.catalog.take(visibleCount).length} из ${controller.catalog.length}',
+            'Показано ${browsed.take(visibleCount).length} из ${browsed.length}',
           ),
         ),
-        if (visibleCount < controller.catalog.length) ...[
+        if (visibleCount < browsed.length) ...[
           const SizedBox(height: 12),
           Center(
             child: OutlinedButton(
@@ -198,135 +337,210 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Event Match'), centerTitle: false),
-    body: SafeArea(
-      child: ListenableBuilder(
-        listenable: controller,
-        builder: (context, _) {
-          final request = controller.lastRequest;
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1280),
-                    child: Padding(
-                      padding: EdgeInsets.all(
-                        MediaQuery.sizeOf(context).width < 600 ? 16 : 32,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            'Люди и места для вашего события',
-                            style: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            request == null
-                                ? 'Знакомьтесь с подрядчиками или задайте условия — мы подберём до трёх подходящих вариантов.'
-                                : 'Подбор по условиям вашего события. Доступность проверена на выбранную дату.',
-                          ),
-                          const SizedBox(height: 24),
-                          Wrap(
-                            alignment: WrapAlignment.spaceBetween,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            spacing: 16,
-                            runSpacing: 12,
-                            children: [
-                              Text(
-                                request == null
-                                    ? 'Каталог · ${controller.catalog.length} профилей'
-                                    : 'Условия подбора',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              FilledButton.icon(
-                                key: const Key('open-filters'),
-                                onPressed:
-                                    controller.loading ||
-                                        controller.error != null
-                                    ? null
-                                    : openFilters,
-                                icon: const Icon(Icons.tune),
-                                label: Text(
-                                  request == null
-                                      ? 'Подобрать под событие'
-                                      : 'Изменить фильтры',
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          if (request != null) ...[
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+    appBar:
+        MediaQuery.sizeOf(context).width >= 1200 &&
+            MediaQuery.textScalerOf(context).scale(16) <= 24
+        ? null
+        : AppBar(
+            title: const BrandMark(),
+            centerTitle: false,
+            actions: [
+              IconButton(
+                onPressed: showHelp,
+                tooltip: 'Как это работает',
+                icon: const Icon(Icons.help_outline),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+    body: Row(
+      children: [
+        if (MediaQuery.sizeOf(context).width >= 1200 &&
+            MediaQuery.textScalerOf(context).scale(16) <= 24)
+          sidebar(),
+        Expanded(
+          child: SafeArea(
+            child: ListenableBuilder(
+              listenable: controller,
+              builder: (context, _) {
+                final request = controller.lastRequest;
+                return CustomScrollView(
+                  controller: pageScroll,
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1280),
+                          child: Padding(
+                            padding: EdgeInsets.all(
+                              MediaQuery.sizeOf(context).width < 600 ? 16 : 32,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                for (final label in [
-                                  request.city,
-                                  request.category,
-                                  request.format,
-                                  '${request.date.day}.${request.date.month}.${request.date.year}',
-                                  'до ${money(request.budget)} ₸',
-                                  if (request.language != null)
-                                    request.language!,
-                                  if (request.hours != null)
-                                    '${request.hours} ч',
-                                ])
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.secondaryContainer,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(label),
+                                if (request == null)
+                                  CatalogHero(count: controller.catalog.length)
+                                else
+                                  Text(
+                                    'Команда вашего события',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700),
                                   ),
+                                const SizedBox(height: 32),
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 16,
+                                  runSpacing: 12,
+                                  children: [
+                                    Text(
+                                      request == null
+                                          ? 'Каталог · ${controller.catalog.length} профилей'
+                                          : 'Условия подбора',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge,
+                                    ),
+                                    FilledButton.icon(
+                                      key: const Key('open-filters'),
+                                      onPressed:
+                                          controller.loading ||
+                                              controller.error != null
+                                          ? null
+                                          : openFilters,
+                                      icon: const Icon(Icons.tune),
+                                      label: Text(
+                                        request == null
+                                            ? 'Подобрать под событие'
+                                            : 'Изменить фильтры',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                if (request == null) ...[
+                                  TextField(
+                                    key: const Key('catalog-search'),
+                                    controller: searchInput,
+                                    onChanged: (value) => setState(() {
+                                      query = value.trim().toLowerCase();
+                                      visibleCount = 12;
+                                    }),
+                                    decoration: InputDecoration(
+                                      hintText: 'Имя подрядчика или город',
+                                      prefixIcon: const Icon(Icons.search),
+                                      suffixIcon: query.isEmpty
+                                          ? null
+                                          : IconButton(
+                                              tooltip: 'Очистить поиск',
+                                              onPressed: () {
+                                                searchInput.clear();
+                                                setState(() => query = '');
+                                              },
+                                              icon: const Icon(Icons.close),
+                                            ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final category in [
+                                        'Все',
+                                        'Ведущий',
+                                        'Фотограф',
+                                        'Банкетный зал',
+                                        'Флорист',
+                                      ])
+                                        ChoiceChip(
+                                          label: Text(category),
+                                          selected: browseCategory == category,
+                                          onSelected: (_) => setState(() {
+                                            browseCategory = category;
+                                            visibleCount = 12;
+                                          }),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                                if (request != null) ...[
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final label in [
+                                        request.city,
+                                        request.category,
+                                        request.format,
+                                        '${request.date.day}.${request.date.month}.${request.date.year}',
+                                        'до ${money(request.budget)} ₸',
+                                        if (request.language != null)
+                                          request.language!,
+                                        if (request.hours != null)
+                                          '${request.hours} ч',
+                                      ])
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.secondaryContainer,
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Text(label),
+                                        ),
+                                    ],
+                                  ),
+                                  if (request.preferences.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Text(
+                                        'Пожелания${controller.service.supportsPreferences ? '' : ' (пока не учитываются)'}: ${request.preferences}',
+                                      ),
+                                    ),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: TextButton.icon(
+                                      key: const Key('reset-filters'),
+                                      onPressed: controller.clearResult,
+                                      icon: const Icon(Icons.close),
+                                      label: const Text('Сбросить фильтры'),
+                                    ),
+                                  ),
+                                ] else
+                                  const Text(
+                                    'Доступность и соответствие бюджету проверим после выбора условий.',
+                                  ),
+                                const SizedBox(height: 24),
+                                results(),
+                                const SizedBox(height: 32),
+                                Text(
+                                  'Данные организаторов · имена анонимизированы · '
+                                  '${controller.catalog.where((c) => c.synthetic).length} синтетических профилей отмечены в карточках.',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
                               ],
                             ),
-                            if (request.preferences.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 12),
-                                child: Text(
-                                  'Пожелания${controller.service.supportsPreferences ? '' : ' (пока не учитываются)'}: ${request.preferences}',
-                                ),
-                              ),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                key: const Key('reset-filters'),
-                                onPressed: controller.clearResult,
-                                icon: const Icon(Icons.close),
-                                label: const Text('Сбросить фильтры'),
-                              ),
-                            ),
-                          ] else
-                            const Text(
-                              'Доступность и соответствие бюджету проверим после выбора условий.',
-                            ),
-                          const SizedBox(height: 24),
-                          results(),
-                          const SizedBox(height: 32),
-                          Text(
-                            'Данные организаторов · имена анонимизированы · '
-                            '${controller.catalog.where((c) => c.synthetic).length} синтетических профилей отмечены в карточках.',
-                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

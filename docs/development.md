@@ -10,7 +10,7 @@
 
 ## Контракт будущего API (проект, сервер ещё не реализован)
 
-`POST /v1/recommendations`, JSON:
+Планируемая Firebase callable Function `recommendContractors`, данные вызова:
 
 ```json
 {
@@ -25,9 +25,9 @@
 }
 ```
 
-Ответ: `outcome` (matched/category_absent/no_eligible), `recommendations` (до 3 объектов contractor + explanation), `summary`, `dataset_version`, `algorithm_version`. Contractor использует поля исходного JSONL. Ошибки валидации — HTTP 422 с ошибками полей; недоступность сервиса — 503. Это контракт для следующей реализации, не существующая конечная точка.
+Ответ: `outcome` (matched/category_absent/no_eligible), `recommendations` (до 3 объектов contractor + explanation), `summary`, `dataset_version`, `algorithm_version`. Contractor использует поля исходного JSONL. Ошибки валидации — callable `invalid-argument`; недоступность сервиса — `unavailable`. Это контракт для следующей реализации, не существующая конечная точка. [Статус Firebase и блокер развёртывания](firebase.md).
 
-В будущем добавляем `ApiRecommendationService implements RecommendationService` и выбираем его в точке сборки приложения. HTTP-клиент, URL, DTO-преобразования, таймауты и ошибки живут в data, API-ключ LLM — только на сервере. Клиентский таймаут сейчас 10 секунд. После редактирования формы поздний ответ игнорируется; это не отмена сетевого запроса на транспортном уровне.
+В будущем добавляем `FirebaseRecommendationService implements RecommendationService` и выбираем его в точке сборки приложения. Firebase Functions SDK, DTO-преобразования, таймауты и ошибки живут в data, API-ключ LLM — только на сервере. Клиентский таймаут сейчас 10 секунд. После редактирования формы поздний ответ игнорируется; это не отмена сетевого запроса на транспортном уровне.
 
 ## Последовательность развития
 

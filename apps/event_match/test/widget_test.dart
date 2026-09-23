@@ -21,6 +21,7 @@ void main() {
     const Size(375, 812),
     const Size(812, 375),
     const Size(768, 1024),
+    const Size(1024, 768),
     const Size(1440, 900),
   ]) {
     testWidgets('search works without overflow at $size', (tester) async {
@@ -32,6 +33,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Тони Тони Чоппер'), findsOneWidget);
       expect(find.byKey(const Key('budget-input')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('open-filters')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('open-filters')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('apply-filters')));
@@ -48,6 +51,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     tester.platformDispatcher.textScaleFactorTestValue = 2;
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(EventMatchApp(repository: repository));
     await tester.pumpAndSettle();
@@ -65,6 +71,8 @@ void main() {
     'cancel retains applied conditions; invalid budget keeps dialog open; reset restores catalog',
     (tester) async {
       await tester.pumpWidget(EventMatchApp(repository: repository));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('open-filters')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('open-filters')));
       await tester.pumpAndSettle();
@@ -88,4 +96,29 @@ void main() {
       expect(find.text('Тони Тони Чоппер'), findsOneWidget);
     },
   );
+  testWidgets('catalog search and category shortcuts filter real profiles', (
+    tester,
+  ) async {
+    await tester.pumpWidget(EventMatchApp(repository: repository));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const Key('catalog-search'));
+    await tester.ensureVisible(field);
+    await tester.pumpAndSettle();
+    await tester.enterText(field, 'чоппер');
+    await tester.pumpAndSettle();
+    expect(find.text('Тони Тони Чоппер'), findsOneWidget);
+    expect(find.text('Буллма'), findsNothing);
+    await tester.enterText(field, 'несуществующий профиль');
+    await tester.pumpAndSettle();
+    expect(find.text('Ничего не нашлось'), findsOneWidget);
+    await tester.enterText(field, '');
+    await tester.pumpAndSettle();
+    final category = find.widgetWithText(ChoiceChip, 'Флорист');
+    await tester.ensureVisible(category);
+    await tester.pumpAndSettle();
+    await tester.tap(category);
+    await tester.pumpAndSettle();
+    expect(find.text('Буллма'), findsNothing);
+    expect(find.text('Тони Тони Чоппер'), findsOneWidget);
+  });
 }
