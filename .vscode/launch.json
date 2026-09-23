@@ -1,0 +1,20 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Event Match · Chrome",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/apps/event_match",
+      "program": "lib/main.dart",
+      "deviceId": "chrome"
+    },
+    {
+      "name": "Event Match · Phone (select device)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "${workspaceFolder}/apps/event_match",
+      "program": "lib/main.dart"
+    }
+  ]
+}

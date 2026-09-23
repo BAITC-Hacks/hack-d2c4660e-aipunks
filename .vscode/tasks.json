@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Event Match: build web",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["build", "web"],
+      "options": {"cwd": "${workspaceFolder}/apps/event_match"},
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Event Match: build Android APK (debug)",
+      "type": "shell",
+      "command": "flutter",
+      "args": ["build", "apk", "--debug"],
+      "options": {"cwd": "${workspaceFolder}/apps/event_match"},
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
