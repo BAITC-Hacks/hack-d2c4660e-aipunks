@@ -99,7 +99,9 @@ class RecommendationComparison extends StatelessWidget {
         return fact(
           'Длительность',
           c.maxHours == null
-              ? 'Без привязки к часам присутствия'
+              ? c.isLive
+                    ? 'Длительность не подтверждена'
+                    : 'Без привязки к часам присутствия'
               : 'До ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
         );
       case 3:
@@ -107,16 +109,15 @@ class RecommendationComparison extends StatelessWidget {
       case 4:
         return fact('Форматы', c.formats.join(', '));
       case 5:
-        return AiExplanation(text: r.explanation, generated: r.source == 'llm');
+        return AiExplanation(text: r.explanation, source: r.source);
       case 6:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final text
-                in (unverified[c.id] ?? const <String>[]).toSet()) ...[
-              Text(text),
-              const SizedBox(height: 8),
-            ],
+            ExplanationLimitations(
+              items: {...r.unchecked, ...?unverified[c.id]}.toList(),
+            ),
+            const SizedBox(height: 8),
             Text(
               [
                 c.isLive
@@ -142,7 +143,8 @@ class RecommendationComparison extends StatelessWidget {
                       context,
                       contractor: c,
                       explanation: r.explanation,
-                      generated: r.source == 'llm',
+                      source: r.source,
+                      unchecked: {...r.unchecked, ...?unverified[c.id]}.toList(),
                       recommendation: r,
                     )
                   : null,

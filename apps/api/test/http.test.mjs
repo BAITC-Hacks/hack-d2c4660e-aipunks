@@ -30,7 +30,7 @@ test('HTTP catalog, CORS, version checks, forged selection and missing-key fallb
     try { await worker.ready; ids=(await worker.match(catalog.profiles,request)).cards.map(c=>c.id); }
     finally { worker.close(); }
     assert.equal(ids.length,3);
-    const body={request,catalog_version:catalog.catalog_version,algorithm_version:'contrast-v2',ids};
+    const body={request,catalog_version:catalog.catalog_version,algorithm_version:'evidence-v3',ids};
     const post=payload=>fetch(`${url}/v1/explanations`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     assert.equal((await post({...body,catalog_version:'stale'})).status,409);
     assert.equal((await post({...body,ids:['forged']})).status,409);

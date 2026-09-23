@@ -44,6 +44,8 @@ Future<void> main() async {
                     'main_fact': r.mainFact,
                     'fit_fact': r.fitFact,
                     'template': r.explanation,
+                    'explanation_options': r.explanationOptions,
+                    'unchecked': r.unchecked,
                     'equivalent': r.equivalent,
                     'score': r.score,
                     'features': r.features,

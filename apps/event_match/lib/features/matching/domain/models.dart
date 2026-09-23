@@ -201,6 +201,8 @@ class Recommendation {
     this.fitFact = '',
     this.source = 'template',
     this.equivalent = false,
+    this.explanationOptions = const [],
+    this.unchecked = const [],
   });
   final Contractor contractor;
   final String explanation;
@@ -208,6 +210,7 @@ class Recommendation {
   final Map<String, double> features;
   final String mainFact, fitFact, source;
   final bool equivalent;
+  final List<String> explanationOptions, unchecked;
 
   Recommendation withText(String text, String source) => Recommendation(
     contractor,
@@ -218,6 +221,8 @@ class Recommendation {
     fitFact: fitFact,
     source: source,
     equivalent: equivalent,
+    explanationOptions: explanationOptions,
+    unchecked: unchecked,
   );
 }
 
@@ -253,7 +258,7 @@ class MatchResult {
     this.evaluations = const [],
     this.relaxations = const [],
     this.catalogVersion = '',
-    this.algorithmVersion = 'contrast-v2',
+    this.algorithmVersion = 'evidence-v3',
     this.notice = '',
   });
   final MatchOutcome outcome;

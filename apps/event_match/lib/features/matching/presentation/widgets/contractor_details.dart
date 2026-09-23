@@ -11,6 +11,9 @@ Future<void> showContractorDetails(
   required Contractor contractor,
   String? explanation,
   bool generated = false,
+  String? source,
+  ExplanationKind explanationKind = ExplanationKind.matching,
+  List<String> unchecked = const [],
   Recommendation? recommendation,
 }) => showSidePanel<void>(
   context,
@@ -19,6 +22,9 @@ Future<void> showContractorDetails(
     contractor: contractor,
     explanation: explanation,
     generated: generated,
+    source: source,
+    explanationKind: explanationKind,
+    unchecked: unchecked,
     recommendation: recommendation,
   ),
 );
@@ -29,17 +35,25 @@ class ContractorDetails extends StatelessWidget {
     required this.contractor,
     this.explanation,
     this.generated = false,
+    this.source,
+    this.explanationKind = ExplanationKind.matching,
+    this.unchecked = const [],
     this.recommendation,
   });
   final Contractor contractor;
   final String? explanation;
   final bool generated;
+  final String? source;
+  final ExplanationKind explanationKind;
+  final List<String> unchecked;
   final Recommendation? recommendation;
 
   @override
   Widget build(BuildContext context) {
     final c = contractor;
     final theme = Theme.of(context);
+    final text = explanation ?? recommendation?.explanation;
+    final limitations = {...unchecked, ...?recommendation?.unchecked}.toList();
     Widget section(String title, Widget child) => Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -85,10 +99,20 @@ class ContractorDetails extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text('${c.categories.join(' · ')} · ${c.city}'),
                   const SizedBox(height: 24),
-                  if (explanation != null)
-                    section(
-                      'Краткое объяснение',
-                      AiExplanation(text: explanation!, generated: generated),
+                  if (text != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: AiExplanation(
+                        text: text,
+                        kind: explanationKind,
+                        source: recommendation?.source ?? source,
+                        generated: generated,
+                      ),
+                    ),
+                  if (limitations.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      child: ExplanationLimitations(items: limitations),
                     ),
                   section(
                     'Условия и услуги',
@@ -103,7 +127,9 @@ class ContractorDetails extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           c.maxHours == null
-                              ? 'Без привязки к часам присутствия'
+                              ? c.isLive
+                                    ? 'Длительность не указана'
+                                    : 'Без привязки к часам присутствия'
                               : 'Продолжительность: до ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
                         ),
                         const SizedBox(height: 8),

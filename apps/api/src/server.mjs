@@ -62,7 +62,7 @@ const server = createServer(async (req,res) => {
       if (profiles.some(p=>!p)) return send(400,{error:'unknown-id'});
       return send(200,{...await explain(catalogFacts(profiles,imported.version)),catalog_version:imported.version});
     }
-    if (body.catalog_version !== imported.version || body.algorithm_version !== 'contrast-v2') return send(409,{error:'version-mismatch'});
+    if (body.catalog_version !== imported.version || body.algorithm_version !== 'evidence-v3') return send(409,{error:'version-mismatch'});
     const q = body.request;
     if (!q || !Number.isSafeInteger(q.budget_kzt) || q.budget_kzt<=0 || !/^2026-\d{2}-\d{2}$/.test(q.date) || new Date(q.date).toISOString().slice(0,10)!==q.date || !['city','category','event_format'].every(k=>typeof q[k]==='string'&&q[k].length<=100) || typeof (q.preferences??'')!=='string' || (q.preferences??'').length>1000 || (q.language!=null && (typeof q.language!=='string'||q.language.length>100)) || (q.hours!=null && (!Number.isFinite(q.hours)||q.hours<=0))) return send(400,{error:'invalid-request'});
     // Reuse the exact Dart engine against SQLite; never trust client facts or IDs.
