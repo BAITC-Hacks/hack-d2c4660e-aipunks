@@ -132,10 +132,7 @@ void main() {
             .map(
               (c) => {
                 'id': c.contractor.id,
-                'explanation': c.explanation.replaceFirst(
-                  'Цена от',
-                  'Стоимость от',
-                ),
+                'explanation': c.explanationOptions.last,
                 'source': 'llm',
               },
             )
@@ -154,7 +151,10 @@ void main() {
       }),
     );
     final accepted = await service.recommend(request);
-    expect(accepted.recommendations.every((c) => c.source == 'llm'), isTrue);
+    expect(accepted.recommendations.any((c) => c.source == 'llm'), isTrue);
+    for (final c in accepted.recommendations) {
+      expect(c.source, c.equivalent ? 'template' : 'llm');
+    }
     expect(accepted.notice, contains('Из кэша'));
     reverse = true;
     final rejected = await service.recommend(request);

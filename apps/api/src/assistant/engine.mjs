@@ -49,7 +49,10 @@ export function evaluate(catalog, rawBrief, semanticScores) {
         const profileUnchecked = [
             ...unchecked
         ];
-        if (brief.hours !== null && contractor.max_hours === null) profileUnchecked.push("Длительность не подтверждена");
+        // In the supplied dataset null means a service without a required
+        // on-site duration (for example gifts/decor), not missing evidence.
+        // A live profile has no such dataset guarantee.
+        if (brief.hours !== null && contractor.max_hours === null && (contractor.is_live === true || catalog.source === "live")) profileUnchecked.push("Длительность не подтверждена");
         brief.preferences.forEach((preference, index)=>{
             if (evidence[index].status === "unknown") profileUnchecked.push(`Не подтверждено: ${preference.text}`);
         });
@@ -82,22 +85,68 @@ export function evaluate(catalog, rawBrief, semanticScores) {
         unchecked
     };
 }
-function excerpt(text) {
-    const trimmed = text.trim();
-    if (trimmed.length <= 200) return trimmed;
-    const boundary = trimmed.lastIndexOf(" ", 200);
-    return trimmed.slice(0, boundary > 80 ? boundary : 200);
+const money = (value)=>new Intl.NumberFormat("ru-RU").format(value);
+const displayDate = (date)=>date.split("-").reverse().join(".");
+const sentenceSegments = new Intl.Segmenter("ru", { granularity: "sentence" });
+
+/** Expand an exact evidence substring to its complete source sentence(s).
+ * Never crop by character count: a trailing negation or condition matters. */
+function fullEvidenceQuote(description, quote) {
+    const start = description.indexOf(quote);
+    if (start < 0 || !quote) return null;
+    const end = start + quote.length;
+    return [...sentenceSegments.segment(description)]
+        .filter((part)=>part.index < end && part.index + part.segment.length > start)
+        .map((part)=>part.segment).join("").trim();
+}
+function compactQuote(quote) {
+    return quote.length <= 180 && [...sentenceSegments.segment(quote)].length === 1;
+}
+function shortLabel(text) {
+    // Keep user wording intact when it fits; never cut away a qualification or
+    // negation merely to fit the card. The full wish remains in the brief.
+    return text.length <= 100 && !/[.!?…\r\n]/u.test(text);
+}
+function quotedSentence(prefix, quote) {
+    // The original punctuation stays inside the quote. A sentence without a
+    // terminal mark receives it outside; no source words are removed.
+    return `${prefix}: «${quote}»${/[.!?…][»”"')\]]?$/u.test(quote) ? "" : "."}`;
 }
 function explain(catalog, item, brief) {
     const { contractor, evidence } = item;
-    const relevantIndex = evidence.findIndex((entry)=>entry.status === "contradicted");
-    const supportedIndex = evidence.findIndex((entry)=>entry.status === "supported");
-    const chosenIndex = relevantIndex >= 0 ? relevantIndex : supportedIndex;
-    const sourceFeature = (catalog.features.get(contractor.id) ?? []).find((entry)=>entry.polarity === "supports");
-    let explanation = chosenIndex >= 0 ? `${evidence[chosenIndex].status === "supported" ? "Есть подтверждение пожелания" : "Есть противоречие пожеланию"} «${brief.preferences[chosenIndex].text}»: «${excerpt(evidence[chosenIndex].quote)}».` : `Из профиля: «${excerpt(sourceFeature?.quote ?? contractor.description)}».`;
-    const unknownRequired = brief.preferences.filter((preference, i)=>preference.importance === "required" && evidence[i].status === "unknown");
-    if (unknownRequired.length) explanation += ` Обязательное условие нужно подтвердить: ${unknownRequired.map((item)=>item.text).join(", ")}.`;
-    return explanation;
+    const startingPrice = `${contractor.price_imputed ? "Оценочная начальная цена" : "Начальная цена"} — от ${money(contractor.price_from_kzt)} ₸ за мероприятие`;
+    const limit = brief.budget_scope === "contractor" && brief.budget_kzt !== null
+        ? ` при вашем лимите ${money(brief.budget_kzt)} ₸` : "";
+    const priceSentence = `${startingPrice}${limit}; итоговую стоимость нужно согласовать.`;
+    // A preferred contradiction must remain visible even when another wish is
+    // supported. Unknown wishes are reported separately in unchecked.
+    const chosenIndex = evidence.findIndex((entry)=>entry.status === "contradicted");
+    const requiredSupport = evidence.findIndex((entry, index)=>entry.status === "supported" && brief.preferences[index].importance === "required");
+    const supportedIndex = requiredSupport >= 0 ? requiredSupport : evidence.findIndex((entry)=>entry.status === "supported");
+    const semanticIndex = chosenIndex >= 0 ? chosenIndex : supportedIndex;
+    if (semanticIndex >= 0) {
+        const quote = fullEvidenceQuote(contractor.description, evidence[semanticIndex].quote);
+        if (quote) {
+            const text = brief.preferences[semanticIndex].text;
+            const wish = shortLabel(text) ? `пожеланию «${text}»` : `пожеланию №${semanticIndex + 1}`;
+            const confirmedWish = shortLabel(text) ? `Пожелание «${text}»` : `Пожелание №${semanticIndex + 1}`;
+            const prefix = evidence[semanticIndex].status === "contradicted"
+                ? `Описание противоречит ${wish}`
+                : `${confirmedWish} подтверждено описанием`;
+            // Full source context stays in evidence, including long sentences
+            // and evidence spanning several sentences. Only a complete short
+            // sentence belongs in the two-sentence card explanation.
+            return `${priceSentence} ${compactQuote(quote) ? quotedSentence(prefix, quote) : `${prefix}.`}`;
+        }
+    }
+    const facts = [shortLabel(brief.event_format) ? `формат «${brief.event_format}»` : "запрошенный формат"];
+    if (brief.language !== null) facts.push(shortLabel(brief.language) ? `запрошенный язык «${brief.language}»` : "запрошенный язык");
+    if (brief.hours !== null && contractor.max_hours !== null) facts.push(`предел ${contractor.max_hours} ч при запросе на ${brief.hours} ч`);
+    let fitSentence = `В анкете ${facts.length > 1 ? "указаны" : "указан"} ${facts.join(", ")}`;
+    if (brief.hours !== null && contractor.max_hours === null && contractor.is_live !== true && catalog.source !== "live") {
+        fitSentence += `; услуга не привязана к длительности присутствия (запрошено ${brief.hours} ч)`;
+    }
+    return `${priceSentence} ${fitSentence}.`;
 }
 export function recommend(catalog, rawBrief, semanticScores) {
     const brief = validateBrief(rawBrief);
@@ -111,13 +160,22 @@ export function recommend(catalog, rawBrief, semanticScores) {
             contractor: item.contractor,
             explanation: explain(catalog, item, brief),
             unchecked: item.unchecked,
-            evidence: item.evidence
+            evidence: item.evidence.map((entry)=>({
+                ...entry,
+                quote: fullEvidenceQuote(item.contractor.description, entry.quote) ?? entry.quote
+            }))
         }));
     const preliminary = unchecked.length > 0 || recommendations.some((item)=>item.unchecked.length > 0);
     const rejectedText = Object.entries(rejected).map(([reason, count])=>`${count} — ${rejectionLabels[reason]}`).join("; ");
-    let summary = pool.length === 0 ? "В этом городе такой категории пока нет в каталоге." : eligible.length === 0 ? `Никто не проходит по заданным условиям. ${rejectedText}.` : `${preliminary ? "Предварительно подходят" : "Проходят по указанным условиям"} ${eligible.length} из ${pool.length}; показано ${recommendations.length}.`;
-    if (eligible.length && rejectedText) summary += ` Исключены: ${rejectedText}.`;
-    if (!dateIsCovered(brief.date)) summary += " Доступность на дату не проверена.";
+    let summary = pool.length === 0 ? "В этом городе такой категории пока нет в каталоге." : eligible.length === 0 ? `Никто не проходит по заданным условиям. ${rejectedText}.` : `Найдено ${eligible.length} из ${pool.length}; показано ${recommendations.length}${preliminary ? " — предварительно" : ""}.`;
+    if (eligible.length > 0 && eligible.length < 3) {
+        summary += rejectedText ? ` Меньше трёх вариантов: остальные исключены (${rejectedText}).`
+            : " Меньше трёх вариантов: других анкет этой категории в городе нет.";
+    } else if (eligible.length && rejectedText) summary += ` Исключены: ${rejectedText}.`;
+    if (brief.date === null) summary += " Дата не задана; занятость не проверена.";
+    else if (!dateIsCovered(brief.date)) summary += ` Занятость на ${displayDate(brief.date)} не проверена: дата вне календаря 23.09–31.12.2026.`;
+    else if (pool.length === 0) summary += ` Дата запроса — ${displayDate(brief.date)}.`;
+    else summary += ` Проверена занятость на ${displayDate(brief.date)}${recommendations.length ? "; у показанных вариантов дата не отмечена занятой" : ""}.`;
     if (brief.budget_kzt === null || brief.budget_scope === "event") summary += " Бюджет на одного подрядчика не проверен.";
     return {
         outcome: pool.length === 0 ? "category_absent" : eligible.length === 0 ? "no_eligible" : "matched",

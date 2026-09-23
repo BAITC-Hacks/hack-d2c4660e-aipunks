@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/design_tokens.dart';
+import '../../../matching/presentation/widgets/ai_explanation.dart';
 import '../../../matching/presentation/widgets/contractor_details.dart';
 import '../../../matching/presentation/widgets/side_panel.dart';
 import '../../../matching/domain/models.dart';
@@ -78,9 +79,10 @@ class AssistantRecommendations extends StatelessWidget {
                         width: width,
                         child: _ComparisonProfile(
                           recommendation: recommendation,
-                          unverified:
-                              unverified[recommendation.contractor.id] ??
-                              const [],
+                          unverified: {
+                            ...recommendation.unchecked,
+                            ...?unverified[recommendation.contractor.id],
+                          }.toList(),
                         ),
                       ),
                   ],
@@ -106,14 +108,21 @@ class AssistantRecommendations extends StatelessWidget {
       context,
       contractor: recommendation.contractor,
       explanation: recommendation.explanation,
-      generated: recommendation.source == 'llm',
+      source: recommendation.source,
+      unchecked: {
+        ...recommendation.unchecked,
+        ...?unverified[recommendation.contractor.id],
+      }.toList(),
     );
   }
 
   Widget _card(BuildContext context, Recommendation recommendation, int rank) {
     final c = recommendation.contractor;
     final theme = Theme.of(context);
-    final unchecked = unverified[c.id] ?? const [];
+    final unchecked = {
+      ...recommendation.unchecked,
+      ...?unverified[c.id],
+    }.toList();
     return Container(
       key: ValueKey('assistant-contractor-${c.id}'),
       padding: const EdgeInsets.all(20),
@@ -164,15 +173,20 @@ class AssistantRecommendations extends StatelessWidget {
           const SizedBox(height: 16),
           Text('от ${money(c.price)} ₸', style: theme.textTheme.titleLarge),
           const SizedBox(height: 12),
-          Text(recommendation.explanation),
+          AiExplanation(
+            text: recommendation.explanation,
+            source: recommendation.source,
+          ),
           if (unchecked.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(unchecked.join(' · '), style: theme.textTheme.bodySmall),
+            ExplanationLimitations(items: unchecked),
           ],
           const SizedBox(height: 12),
           Text(
             [
-              c.synthetic
+              c.isLive
+                  ? 'Опубликованный профиль'
+                  : c.synthetic
                   ? 'Синтетический профиль'
                   : 'Анонимизированный профиль',
               if (c.priceImputed) 'Цена восстановлена',
@@ -287,7 +301,9 @@ class _ComparisonProfile extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             c.maxHours == null
-                ? 'Длительность не указана'
+                ? c.isLive
+                      ? 'Длительность не указана'
+                      : 'Без привязки к часам присутствия'
                 : 'До ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
           ),
           const SizedBox(height: 12),
@@ -295,7 +311,9 @@ class _ComparisonProfile extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             [
-              c.synthetic
+              c.isLive
+                  ? 'Опубликованный профиль'
+                  : c.synthetic
                   ? 'Синтетический профиль'
                   : 'Анонимизированный профиль',
               if (c.priceImputed) 'Цена восстановлена',
@@ -304,10 +322,13 @@ class _ComparisonProfile extends StatelessWidget {
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          Text(recommendation.explanation),
+          AiExplanation(
+            text: recommendation.explanation,
+            source: recommendation.source,
+          ),
           if (unverified.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Нужно уточнить: ${unverified.join(' · ')}'),
+            ExplanationLimitations(items: unverified),
           ],
         ],
       ),

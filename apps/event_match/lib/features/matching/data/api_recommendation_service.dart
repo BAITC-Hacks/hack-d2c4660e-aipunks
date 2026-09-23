@@ -128,12 +128,7 @@ class ApiRecommendationService implements RecommendationService {
         }
         final text = card['explanation'];
         if (text is String &&
-            text.length >= 30 &&
-            text.length <= 300 &&
-            !RegExp(
-              r'гарантир|лучший|отзыв|скидк|[<>\n]',
-              caseSensitive: false,
-            ).hasMatch(text) &&
+            original.explanationOptions.contains(text) &&
             card['source'] == 'llm' &&
             !original.equivalent) {
           recommendations.add(original.withText(text, 'llm'));
@@ -145,6 +140,7 @@ class ApiRecommendationService implements RecommendationService {
       final reason = switch (body['reason']) {
         'missing-key' => 'На сервере не задан ключ GPT',
         'daily-limit' => 'Достигнут дневной лимит AI-запросов',
+        'verified-facts' => 'Показаны проверенные факты профиля',
         _ => 'AI-текст не получен или не прошёл проверку',
       };
       return result.withExplanations(

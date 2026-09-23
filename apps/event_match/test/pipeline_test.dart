@@ -176,6 +176,12 @@ void main() {
               expect(card.contractor.price, lessThanOrEqualTo(q.budget));
               expect(card.explanation.length, lessThanOrEqualTo(300));
               expect(
+                RegExp(r'[.!?](?:\s|$)').allMatches(card.explanation).length,
+                inInclusiveRange(1, 2),
+              );
+              expect(card.explanation, contains('итоговую стоимость уточните'));
+              expect(card.explanation, isNot(contains('запас бюджета')));
+              expect(
                 genericPhrases.any(normalize(card.explanation).contains),
                 isFalse,
               );

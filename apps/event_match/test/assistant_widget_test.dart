@@ -9,6 +9,7 @@ import 'package:event_match/features/assistant/presentation/assistant_controller
 import 'package:event_match/features/assistant/presentation/assistant_screen.dart';
 import 'package:event_match/features/matching/data/catalog_repository.dart';
 import 'package:event_match/features/matching/domain/models.dart';
+import 'package:event_match/features/matching/presentation/widgets/ai_explanation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -136,19 +137,17 @@ void main() {
     testWidgets(
       'assistant visual preview $size',
       (tester) async {
-        final font = FontLoader('Roboto');
         await tester.runAsync(() async {
-          final flutterRoot =
-              Platform.environment['FLUTTER_ROOT'] ??
-              '/opt/homebrew/share/flutter';
-          final bytes = await File(
-            '$flutterRoot/bin/cache/artifacts/material_fonts/Roboto-Regular.ttf',
-          ).readAsBytes();
-          font.addFont(Future.value(ByteData.sublistView(bytes)));
-          await font.load();
-          await (FontLoader('MaterialIcons')
-                ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
-              .load();
+          for (final font in {
+            'Manrope': 'assets/fonts/Manrope.ttf',
+            'NotoSans': 'assets/fonts/NotoSans.ttf',
+            'CormorantGaramond': 'assets/fonts/CormorantGaramond-Italic.ttf',
+            'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
+          }.entries) {
+            final loader = FontLoader(font.key)
+              ..addFont(rootBundle.load(font.value));
+            await loader.load();
+          }
         });
         tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
@@ -166,6 +165,8 @@ void main() {
             await controller.sendMessage(
               'Фотограф на свадьбу в Астане до 300 тысяч. Хотим живые кадры.',
             );
+            await tester.pumpAndSettle();
+            await tester.ensureVisible(find.byType(AiExplanation).first);
             await tester.pumpAndSettle();
           }
           await tester.runAsync(() async {

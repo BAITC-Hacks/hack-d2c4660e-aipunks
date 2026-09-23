@@ -1,4 +1,5 @@
 import 'catalog_version.dart';
+import 'explanation_policy.dart';
 import 'models.dart';
 import 'normalization.dart';
 
@@ -140,7 +141,7 @@ class MatchingEngine {
         : MatchOutcome.matched;
     final summary = outcome == MatchOutcome.categoryAbsent
         ? 'В этом городе такой категории пока нет в каталоге.'
-        : '${top.isEmpty ? 'Кандидаты есть, но никто не проходит по условиям.' : 'Подходят ${eligible.length} из ${evaluations.length}; показано ${top.length}. Все показанные свободны ${dateKey(r.date)}, берут формат «${r.format}» и укладываются в бюджет ${r.budget} ₸.'}'
+        : '${top.isEmpty ? 'Кандидаты есть, но никто не проходит по условиям.' : 'Подходят ${eligible.length} из ${evaluations.length}; показано ${top.length}. По календарю свободны ${dateKey(r.date)}, в профиле есть формат «${r.format}»; стартовая цена не выше ${r.budget} ₸, итоговую стоимость нужно уточнить.'}'
               '${rejected.isEmpty ? '' : ' Исключены: $rejected.'}'
               '${top.isNotEmpty && top.length < 3 && rejected.isEmpty ? ' В этой категории города всего ${evaluations.length} профилей.' : ''}';
     final mainFacts = {
@@ -162,22 +163,36 @@ class MatchingEngine {
                     ),
           )
           .toList();
-      final equivalent = distinguishing.isEmpty;
-      final main = equivalent
-          ? 'По доступным фактам нет уникального преимущества перед соседними вариантами'
-          : distinguishing.first.$1;
+      final equivalent =
+          distinguishing.isEmpty &&
+          top.any((p) => p.id != c.id && p.price == c.price);
+      final main = distinguishing.isNotEmpty
+          ? distinguishing.first.$1
+          : mainFacts[c.id]!.first.$1;
       used.add(main);
-      final fit =
-          'Цена от ${c.price} ₸; запас бюджета ${r.budget - c.price} ₸${c.priceImputed ? '; цена оценена — уточните' : ''}';
+      final fit = priceFit(c, r.budget);
+      final options = ['$main. $fit.', '$fit. $main.'];
       recommendations.add(
         Recommendation(
           c,
-          '$main. $fit.${datePolicy.isLive ? ' Доступность по календарю — это не бронирование.' : ''}',
+          options.first,
           score: score(featureMap[c.id]!),
           features: featureMap[c.id]!,
           mainFact: main,
           fitFact: fit,
           equivalent: equivalent,
+          explanationOptions: equivalent ? [options.first] : options,
+          unchecked: [
+            if (datePolicy.isLive)
+              'Доступность по календарю — это не бронирование',
+            if (r.hours != null && c.maxHours == null && c.isLive)
+              'Длительность не подтверждена',
+            if (c.priceImputed)
+              'Стартовая цена восстановлена при подготовке данных',
+            if (c.cityImputed) 'Город восстановлен при подготовке данных',
+            if (equivalent)
+              'По указанным условиям нет подтверждённого отличия от соседних вариантов',
+          ],
         ),
       );
     }
@@ -205,56 +220,24 @@ class MatchingEngine {
     Map<String, double> f,
   ) {
     final others = top.where((p) => p.id != c.id).toList();
-    final result = <(String, double)>[];
-    void add(String text, String feature) =>
-        result.add((text, f[feature]! * scoreWeights[feature]!));
-    if (others.isNotEmpty && others.every((p) => p.price > c.price)) {
-      final nearest = others
-          .map((p) => p.price)
-          .reduce((a, b) => a < b ? a : b);
-      add(
-        'Самая низкая стартовая цена в подборке; дешевле ближайшего варианта на ${nearest - c.price} ₸',
-        'budget',
-      );
-    }
-    for (final language in c.languages) {
-      if (others.isNotEmpty &&
-          others.every((p) => !p.languages.contains(language))) {
-        add(
-          'Только этот вариант в подборке указывает язык «$language»',
-          'language',
-        );
-      }
-    }
-    if (c.maxHours != null &&
-        others.isNotEmpty &&
-        others.every((p) => p.maxHours != null && p.maxHours! < c.maxHours!)) {
-      add(
-        'Максимум ${number(c.maxHours!)} ч на площадке — больше, чем у остальных в подборке',
-        'hours',
-      );
-    }
-    if (c.formats.length <= 2) {
-      add('В профиле указаны только форматы: ${c.formats.join(', ')}', 'focus');
-    }
-    for (final quote in excerpts(c.description, r)) {
-      add('В описании: «$quote»', 'description');
-    }
-    if (c.maxHours != null) {
-      add('Работает на площадке до ${number(c.maxHours!)} ч', 'hours');
-    }
-    add('Языки профиля: ${([...c.languages]..sort()).join(', ')}', 'language');
-    add('В профиле ${c.formats.length} форматов мероприятий', 'focus');
-    final insertionOrder = {
-      for (var i = 0; i < result.length; i++) result[i].$1: i,
-    };
-    result.sort((a, b) {
-      final weight = b.$2.compareTo(a.$2);
-      return weight != 0
-          ? weight
-          : insertionOrder[a.$1]!.compareTo(insertionOrder[b.$1]!);
-    });
-    return result;
+    // Importance here is editorial only; candidate scores and order stay intact.
+    return [
+      for (final quote in excerpts(c.description, r))
+        ('По теме запроса в описании: «$quote»', 1),
+      for (final fact in requestedFitFacts(
+        c,
+        format: r.format,
+        language: r.language,
+        hours: r.hours,
+      ).where((fact) => !fact.startsWith('В профиле есть')))
+        (fact, .9),
+      if (others.isNotEmpty && others.every((p) => p.price > c.price))
+        (
+          'Среди этих вариантов самая низкая стартовая цена для формата «${r.format}»',
+          .8,
+        ),
+      ('В профиле есть ваш формат «${r.format}»', .5),
+    ];
   }
 
   List<Relaxation> _relaxations(
@@ -383,7 +366,8 @@ class MatchingEngine {
 
 bool sameFact(String a, String b) {
   if (a == b) return true;
-  if (!a.startsWith('В описании:') || !b.startsWith('В описании:')) {
+  if (!a.startsWith('По теме запроса в описании:') ||
+      !b.startsWith('По теме запроса в описании:')) {
     return false;
   }
   // Ignore Latin brand names and minor inflections: a changed brand is not a benefit.
@@ -413,29 +397,11 @@ Set<String> keywords(MatchRequest r) => {
 };
 
 List<String> excerpts(String description, MatchRequest r) {
-  final clean = description.replaceAll(RegExp(r'\s+'), ' ').trim();
-  final lower = normalize(clean);
-  final result = <String>{};
-  for (final word in keywords(r)) {
-    final index = lower.indexOf(word);
-    if (index < 0) continue;
-    var start = (index - 45).clamp(0, clean.length);
-    var end = (index + word.length + 65).clamp(0, clean.length);
-    if (start > 0) {
-      final space = clean.indexOf(' ', start);
-      if (space >= 0 && space < index) start = space + 1;
-    }
-    if (end < clean.length) {
-      final space = clean.lastIndexOf(' ', end);
-      if (space > index + word.length) end = space;
-    }
-    final quote = clean
-        .substring(start, end)
-        .replaceAll(RegExp(r'[.!?]+'), ';')
-        .replaceAll('«', '')
-        .replaceAll('»', '')
-        .trim();
-    if (!genericPhrases.any(normalize(quote).contains)) result.add(quote);
-  }
-  return result.toList()..sort();
+  final formatTerms =
+      formatKeywords[canonical('format', r.format)] ?? const <String>[];
+  final allTerms = keywords(r);
+  return relevantExcerpts(description, [
+    ...allTerms.where((term) => !formatTerms.contains(term)),
+    ...formatTerms,
+  ]);
 }

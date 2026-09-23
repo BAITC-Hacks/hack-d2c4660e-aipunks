@@ -174,8 +174,8 @@ void main() {
       expect(first.summary, contains('2 — доступность не подтверждена'));
       expect(first.summary, contains('1 — заняты на дату'));
       expect(
-        first.recommendations.first.explanation,
-        contains('это не бронирование'),
+        first.recommendations.first.unchecked,
+        contains('Доступность по календарю — это не бронирование'),
       );
       expect(first.recommendations.every((r) => r.contractor.isLive), isTrue);
     },

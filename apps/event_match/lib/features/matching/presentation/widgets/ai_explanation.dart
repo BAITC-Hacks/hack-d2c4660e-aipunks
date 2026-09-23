@@ -1,21 +1,40 @@
 import 'package:flutter/material.dart';
 
+enum ExplanationKind { matching, services }
+
 /// A finite entrance animation: no perpetual shimmer or moving body text.
 class AiExplanation extends StatelessWidget {
-  const AiExplanation({super.key, required this.text, this.generated = true});
+  const AiExplanation({
+    super.key,
+    required this.text,
+    this.generated = false,
+    this.source,
+    this.kind = ExplanationKind.matching,
+    this.maxLines,
+  });
   final String text;
+
+  /// Retained for older callers. Authorship is determined only by [source].
   final bool generated;
+  final String? source;
+  final ExplanationKind kind;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final reduced = MediaQuery.disableAnimationsOf(context);
+    final matching = kind == ExplanationKind.matching;
+    final fromLlm = source == 'llm';
+    final foreground = matching
+        ? colors.onPrimaryContainer
+        : colors.onSecondaryContainer;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: generated ? colors.primaryContainer : colors.secondaryContainer,
+        color: matching ? colors.primaryContainer : colors.secondaryContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -24,7 +43,7 @@ class AiExplanation extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (generated) ...[
+              if (fromLlm) ...[
                 ExcludeSemantics(
                   child: TweenAnimationBuilder<double>(
                     key: ValueKey(text),
@@ -45,13 +64,14 @@ class AiExplanation extends StatelessWidget {
                 const SizedBox(width: 8),
               ],
               Expanded(
-                child: Text(
-                  generated
-                      ? 'Объяснение от ИИ'
-                      : 'Почему подходит · по данным каталога',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: colors.onPrimaryContainer,
-                    fontWeight: FontWeight.w700,
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    matching ? 'Почему в подборке' : 'Об услугах',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -60,13 +80,53 @@ class AiExplanation extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             text,
+            maxLines: maxLines,
+            overflow: maxLines == null ? null : TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: colors.onPrimaryContainer,
+              color: foreground,
               height: 1.5,
             ),
           ),
+          if (fromLlm) ...[
+            const SizedBox(height: 8),
+            Text(
+              matching ? 'Формулировка выбрана ИИ · GPT' : 'Сводка ИИ · GPT',
+              style: theme.textTheme.labelSmall?.copyWith(color: foreground),
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// Unknown conditions remain separate from the explanation of known matches.
+class ExplanationLimitations extends StatelessWidget {
+  const ExplanationLimitations({super.key, required this.items});
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final values = items
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet();
+    if (values.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          header: true,
+          child: Text('Что уточнить', style: theme.textTheme.labelLarge),
+        ),
+        const SizedBox(height: 6),
+        for (final value in values)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text('• $value', style: theme.textTheme.bodySmall),
+          ),
+      ],
     );
   }
 }
