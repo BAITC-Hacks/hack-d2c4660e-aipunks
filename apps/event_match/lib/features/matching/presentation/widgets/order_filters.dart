@@ -8,10 +8,14 @@ class OrderFilters extends StatefulWidget {
     required this.catalog,
     required this.supportsPreferences,
     this.initial,
+    this.datePolicy = const MatchDatePolicy.demo(),
+    this.lockEventDetails = false,
   });
   final List<Contractor> catalog;
   final bool supportsPreferences;
   final MatchRequest? initial;
+  final MatchDatePolicy datePolicy;
+  final bool lockEventDetails;
 
   @override
   State<OrderFilters> createState() => _OrderFiltersState();
@@ -31,7 +35,12 @@ class _OrderFiltersState extends State<OrderFilters> {
     category = r?.category ?? 'Ведущий';
     format = r?.format ?? 'свадьба';
     language = r?.language ?? 'Любой';
-    date = r?.date ?? DateTime(2026, 10, 10);
+    date =
+        r?.date ??
+        (widget.datePolicy.isLive
+            ? widget.datePolicy.firstDate
+            : DateTime(2026, 10, 10));
+    if (!widget.datePolicy.contains(date)) date = widget.datePolicy.firstDate;
     budget = TextEditingController(text: '${r?.budget ?? 1000000}');
     hours = TextEditingController(text: r?.hours?.toString() ?? '');
     preferences = TextEditingController(text: r?.preferences ?? '');
@@ -49,8 +58,9 @@ class _OrderFiltersState extends State<OrderFilters> {
     String label,
     String value,
     List<String> values,
-    ValueChanged<String> update,
-  ) => Padding(
+    ValueChanged<String> update, {
+    bool enabled = true,
+  }) => Padding(
     padding: const EdgeInsets.only(bottom: 20),
     child: DropdownButtonFormField<String>(
       initialValue: value,
@@ -59,9 +69,11 @@ class _OrderFiltersState extends State<OrderFilters> {
       items: values
           .map((v) => DropdownMenuItem(value: v, child: Text(v)))
           .toList(),
-      onChanged: (v) {
-        if (v != null) setState(() => update(v));
-      },
+      onChanged: !enabled
+          ? null
+          : (v) {
+              if (v != null) setState(() => update(v));
+            },
     ),
   );
 
@@ -127,36 +139,46 @@ class _OrderFiltersState extends State<OrderFilters> {
                     }.toList()..sort()),
                     (v) => category = v,
                   ),
-                  select('Город', city, const [
-                    'Алматы',
-                    'Астана',
-                    'Зарубежье',
-                  ], (v) => city = v),
-                  select('Формат события', format, const [
-                    'свадьба',
-                    'той',
-                    'корпоратив',
-                    'конференция',
-                    'юбилей',
-                    'день рождения',
-                  ], (v) => format = v),
+                  select(
+                    'Город',
+                    city,
+                    const ['Алматы', 'Астана', 'Зарубежье'],
+                    (v) => city = v,
+                    enabled: !widget.lockEventDetails,
+                  ),
+                  select(
+                    'Формат события',
+                    format,
+                    const [
+                      'свадьба',
+                      'той',
+                      'корпоратив',
+                      'конференция',
+                      'юбилей',
+                      'день рождения',
+                    ],
+                    (v) => format = v,
+                    enabled: !widget.lockEventDetails,
+                  ),
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(48, 52),
                     ),
                     icon: const Icon(Icons.calendar_today_outlined),
                     label: Text('Дата: ${date.day}.${date.month}.${date.year}'),
-                    onPressed: () async {
-                      final value = await showDatePicker(
-                        context: context,
-                        initialDate: date,
-                        firstDate: DateTime(2026, 9, 23),
-                        lastDate: DateTime(2026, 12, 31),
-                      );
-                      if (value != null && mounted) {
-                        setState(() => date = value);
-                      }
-                    },
+                    onPressed: widget.lockEventDetails
+                        ? null
+                        : () async {
+                            final value = await showDatePicker(
+                              context: context,
+                              initialDate: date,
+                              firstDate: widget.datePolicy.firstDate,
+                              lastDate: widget.datePolicy.lastDate,
+                            );
+                            if (value != null && mounted) {
+                              setState(() => date = value);
+                            }
+                          },
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -167,9 +189,14 @@ class _OrderFiltersState extends State<OrderFilters> {
                       labelText: 'Бюджет, ₸',
                       helperText: 'На одного подрядчика',
                     ),
-                    validator: (v) => (int.tryParse(v?.trim() ?? '') ?? 0) > 0
-                        ? null
-                        : 'Введите целое число больше нуля',
+                    validator: (v) {
+                      final value = int.tryParse(v?.trim() ?? '') ?? 0;
+                      if (value <= 0) return 'Введите целое число больше нуля';
+                      if (widget.datePolicy.isLive && value > 1000000000) {
+                        return 'Максимальный бюджет — 1 000 000 000 ₸';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   ExpansionTile(
@@ -194,6 +221,9 @@ class _OrderFiltersState extends State<OrderFilters> {
                           final n = double.tryParse(
                             v.trim().replaceAll(',', '.'),
                           );
+                          if (widget.datePolicy.isLive && n != null && n > 48) {
+                            return 'Максимальная длительность — 48 часов';
+                          }
                           return n != null && n.isFinite && n > 0
                               ? null
                               : 'Введите число больше нуля';
@@ -227,8 +257,10 @@ class _OrderFiltersState extends State<OrderFilters> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Доступны даты с 23 сентября по 31 декабря 2026 года.',
+                  Text(
+                    widget.datePolicy.isLive
+                        ? 'Выберите дату в ближайшие 365 дней. Бюджет относится к выбранной категории.'
+                        : 'Доступны даты с 23 сентября по 31 декабря 2026 года.',
                   ),
                 ],
               ),

@@ -7,10 +7,14 @@ import '../domain/recommendation_service.dart';
 enum SearchStatus { idle, searching, success, failure }
 
 class MatchingController extends ChangeNotifier {
-  MatchingController(this.repository, {RecommendationService? service})
-    : service = service ?? LocalRecommendationService(repository);
+  MatchingController(
+    this.repository, {
+    RecommendationService? service,
+    this.datePolicy = const MatchDatePolicy.demo(),
+  }) : service = service ?? LocalRecommendationService(repository);
   final CatalogRepository repository;
   final RecommendationService service;
+  final MatchDatePolicy datePolicy;
   List<Contractor> catalog = [];
   MatchResult? result;
   MatchRequest? lastRequest;
@@ -29,7 +33,7 @@ class MatchingController extends ChangeNotifier {
       catalog = await repository.load();
     } catch (_) {
       error =
-          'Не удалось прочитать каталог. Проверьте JSONL и повторите загрузку.';
+          'Не удалось загрузить каталог. Проверьте соединение и повторите попытку.';
     } finally {
       loading = false;
       if (!_disposed) notifyListeners();
@@ -44,7 +48,7 @@ class MatchingController extends ChangeNotifier {
     result = null;
     notifyListeners();
     try {
-      request.validate();
+      request.validate(datePolicy: datePolicy);
       final response = await service
           .recommend(request)
           .timeout(const Duration(seconds: 10));

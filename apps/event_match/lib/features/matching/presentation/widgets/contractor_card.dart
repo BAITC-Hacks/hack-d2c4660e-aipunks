@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../domain/models.dart';
 import '../../../../app/design_tokens.dart';
 
@@ -21,10 +22,12 @@ class ContractorCard extends StatelessWidget {
     required this.contractor,
     this.explanation,
     this.rank,
+    this.footer,
   });
   final Contractor contractor;
   final String? explanation;
   final int? rank;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +169,40 @@ class ContractorCard extends StatelessWidget {
                             Text('Все форматы: ${c.formats.join(', ')}'),
                             const SizedBox(height: 12),
                             SelectableText(c.description),
+                            if (c.isLive && c.contact.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              SelectableText('Контакты: ${c.contact}'),
+                            ],
+                            for (final url in c.portfolioUrls)
+                              TextButton.icon(
+                                onPressed: () async {
+                                  final uri = Uri.tryParse(url);
+                                  if (uri == null ||
+                                      uri.scheme != 'https' ||
+                                      uri.host.isEmpty) {
+                                    return;
+                                  }
+                                  final opened = await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                  if (!opened && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Не удалось открыть ссылку',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.open_in_new, size: 18),
+                                label: Text(
+                                  url,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -174,7 +211,9 @@ class ContractorCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  c.synthetic
+                  c.isLive
+                      ? 'Карточка проверена'
+                      : c.synthetic
                       ? 'Синтетический профиль организаторов'
                       : 'Анонимизированный профиль',
                   style: theme.textTheme.labelMedium,
@@ -189,6 +228,12 @@ class ContractorCard extends StatelessWidget {
                     'Город заполнен при подготовке датасета',
                     style: theme.textTheme.bodySmall,
                   ),
+                if (c.isLive && explanation == null)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text('Доступность проверим после выбора даты.'),
+                  ),
+                if (footer != null) ...[const SizedBox(height: 16), footer!],
               ],
             ),
           ),

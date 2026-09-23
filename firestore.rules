@@ -1,0 +1,276 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function accountPath(uid) { return /databases/$(database)/documents/accounts/$(uid); }
+    function staffPath(uid) { return /databases/$(database)/documents/staffAccess/$(uid); }
+    function protectedAdmin(uid) { return exists(staffPath(uid)) && get(staffPath(uid)).data.role == 'admin'; }
+    function active() { return verified() && get(accountPath(request.auth.uid)).data.status == 'active'; }
+    function own(uid) { return active() && request.auth.uid == uid; }
+    function staff() {
+      return active() && get(/databases/$(database)/documents/staffAccess/$(request.auth.uid)).data.role in ['moderator', 'admin'];
+    }
+    function admin() {
+      return active() && get(/databases/$(database)/documents/staffAccess/$(request.auth.uid)).data.role == 'admin';
+    }
+    function text(value, maximum) { return value is string && value.size() <= maximum; }
+    function httpsUrl(v) { return text(v, 2048) && v.matches('https://[^ /]+[^ ]*'); }
+    function urls(v) {
+      return v is list && v.size() <= 5
+        && (v.size() < 1 || httpsUrl(v[0])) && (v.size() < 2 || httpsUrl(v[1]))
+        && (v.size() < 3 || httpsUrl(v[2])) && (v.size() < 4 || httpsUrl(v[3]))
+        && (v.size() < 5 || httpsUrl(v[4]));
+    }
+    function content(c) {
+      return c is map && c.keys().hasOnly(['name', 'city', 'categories', 'price', 'formats', 'languages', 'maxHours', 'description', 'contact', 'portfolioUrls'])
+        && text(c.name, 120) && c.city in ['Алматы', 'Астана', 'Зарубежье']
+        && c.categories is list && c.categories.size() <= 10
+        && c.categories.hasOnly(['Ведущий', 'Фотограф', 'Банкетный зал', 'Флорист', 'Декоратор', 'Подарки и сувениры', 'Ведущий церемонии', 'Фото и видеобудки', 'Отель', 'Инструменталист'])
+        && c.price is int && c.price >= 0 && c.price <= 1000000000
+        && c.formats is list && c.formats.size() <= 6
+        && c.formats.hasOnly(['свадьба', 'той', 'корпоратив', 'конференция', 'юбилей', 'день рождения'])
+        && c.languages is list && c.languages.size() <= 3 && c.languages.hasOnly(['русский', 'казахский', 'английский'])
+        && (c.maxHours == null || (c.maxHours is number && c.maxHours > 0 && c.maxHours <= 48))
+        && text(c.description, 5000) && text(c.contact, 500) && urls(c.portfolioUrls);
+    }
+    function complete(c) {
+      return c.name.size() > 0 && c.city.size() > 0 && c.categories.size() > 0
+        && c.price > 0 && c.formats.size() > 0 && c.languages.size() > 0
+        && c.description.size() > 0 && c.contact.size() > 0;
+    }
+    function auditPath(kind, uid, revision) {
+      return /databases/$(database)/documents/audit/$(kind + '_' + uid + '_' + string(revision));
+    }
+    function audited(kind, uid, revision, action, reason) {
+      let p = auditPath(kind, uid, revision);
+      let a = getAfter(p).data;
+      return !exists(p) && a.actorId == request.auth.uid && a.resourceType == kind
+        && a.resourceId == uid && a.revision == revision && a.action == action
+        && a.reason == reason && a.createdAt == request.time;
+    }
+    function publicationPath(uid) { return /databases/$(database)/documents/publishedProfiles/$(uid); }
+    function hiddenAfter(uid) {
+      return !exists(publicationPath(uid)) || getAfter(publicationPath(uid)).data.published == false;
+    }
+
+    match /accounts/{uid} {
+      function shape(a) {
+        return a.keys().hasOnly(['uid', 'name', 'email', 'status', 'deletionRequested', 'revision', 'createdAt', 'updatedAt'])
+          && a.uid == uid && text(a.name, 120) && text(a.email, 320)
+          && a.status in ['active', 'suspended', 'deactivated'] && a.deletionRequested is bool
+          && a.revision is int && a.updatedAt == request.time;
+      }
+      allow get: if (signedIn() && request.auth.uid == uid) || admin();
+      allow list: if admin();
+      allow create: if signedIn() && request.auth.uid == uid && shape(request.resource.data)
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(uid))
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.status == 'active' && request.resource.data.deletionRequested == false
+        && request.resource.data.revision == 1 && request.resource.data.createdAt == request.time;
+      allow update: if shape(request.resource.data)
+        && request.resource.data.revision == resource.data.revision + 1
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.email == resource.data.email
+        && (
+          (own(uid) && request.resource.data.status == resource.data.status
+            && request.resource.data.deletionRequested == resource.data.deletionRequested)
+          || ((own(uid) && request.resource.data.status == 'deactivated')
+            || (admin() && resource.data.status in ['active', 'suspended']
+              && request.resource.data.status in ['active', 'suspended']
+              && request.resource.data.status != resource.data.status
+              && request.resource.data.deletionRequested == resource.data.deletionRequested))
+          && request.resource.data.name == resource.data.name
+          && !protectedAdmin(uid)
+          && audited('account', uid, request.resource.data.revision, request.resource.data.status,
+            getAfter(auditPath('account', uid, request.resource.data.revision)).data.reason)
+          && (request.resource.data.status == 'active' || hiddenAfter(uid))
+        );
+      allow delete: if false;
+    }
+
+    match /staffAccess/{uid} {
+      allow get: if (signedIn() && request.auth.uid == uid) || admin();
+      allow list: if admin();
+      allow create, update: if admin() && uid != request.auth.uid
+        && (!exists(/databases/$(database)/documents/staffAccess/$(uid)) || resource.data.role != 'admin')
+        && request.resource.data.keys().hasOnly(['role', 'revision', 'updatedAt'])
+        && request.resource.data.role in ['moderator', 'none']
+        && (!exists(staffPath(uid)) ? request.resource.data.role == 'moderator' : request.resource.data.role != resource.data.role)
+        && request.resource.data.revision is int
+        && request.resource.data.revision == (exists(/databases/$(database)/documents/staffAccess/$(uid)) ? resource.data.revision + 1 : 1)
+        && request.resource.data.updatedAt == request.time
+        && get(accountPath(uid)).data.status == 'active'
+        && audited('staff', uid, request.resource.data.revision, request.resource.data.role,
+          getAfter(auditPath('staff', uid, request.resource.data.revision)).data.reason);
+      allow delete: if false;
+    }
+
+    match /profiles/{uid} {
+      function shape(p) {
+        return p.keys().hasOnly(['ownerId', 'revision', 'status', 'content', 'reason', 'updatedAt'])
+          && p.ownerId == uid && p.revision is int && p.status in ['draft', 'pending', 'approved', 'changes_requested']
+          && content(p.content) && text(p.reason, 1000) && p.updatedAt == request.time;
+      }
+      function ownerEdit() {
+        return own(uid) && request.resource.data.reason == ''
+          && ((resource.data.status == 'pending' && request.resource.data.status == 'draft' && request.resource.data.content == resource.data.content)
+            || (resource.data.status != 'pending' && request.resource.data.status in ['draft', 'pending']
+              && (request.resource.data.status == 'draft' || complete(request.resource.data.content))));
+      }
+      function review() {
+        let next = request.resource.data;
+        return staff() && request.auth.uid != uid && getAfter(accountPath(uid)).data.status == 'active'
+          && resource.data.status == 'pending' && next.status in ['approved', 'changes_requested']
+          && next.content == resource.data.content && (next.status == 'approved' || next.reason.size() > 0)
+          && audited('profile', uid, next.revision, next.status, next.reason)
+          && (next.status != 'approved' || (getAfter(publicationPath(uid)).data.published == true
+            && getAfter(publicationPath(uid)).data.profileRevision == next.revision
+            && getAfter(publicationPath(uid)).data.content == next.content));
+      }
+      allow read: if own(uid) || staff();
+      allow create: if own(uid) && shape(request.resource.data) && request.resource.data.revision == 1
+        && request.resource.data.status == 'draft' && request.resource.data.reason == '';
+      allow update: if shape(request.resource.data) && request.resource.data.revision == resource.data.revision + 1
+        && (ownerEdit() || review());
+      allow delete: if false;
+    }
+
+    match /publishedProfiles/{uid} {
+      function shape(p) {
+        return p.keys().hasOnly(['ownerId', 'revision', 'profileRevision', 'published', 'content', 'updatedAt'])
+          && p.ownerId == uid && p.revision is int && p.profileRevision is int
+          && p.published is bool && content(p.content) && complete(p.content) && p.updatedAt == request.time;
+      }
+      function publication() {
+        let p = getAfter(/databases/$(database)/documents/profiles/$(uid)).data;
+        return staff() && request.auth.uid != uid && getAfter(accountPath(uid)).data.status == 'active'
+          && p.status == 'approved' && request.resource.data.published == true
+          && request.resource.data.profileRevision == p.revision && request.resource.data.content == p.content
+          && audited('profile', uid, p.revision, 'approved', p.reason);
+      }
+      allow read: if resource.data.published == true || own(uid) || staff();
+      allow create: if shape(request.resource.data) && request.resource.data.revision == 1 && publication();
+      allow update: if shape(request.resource.data) && request.resource.data.revision == resource.data.revision + 1
+        && (publication() || ((own(uid) || staff()) && resource.data.published == true
+          && request.resource.data.published == false
+          && request.resource.data.content == resource.data.content
+          && request.resource.data.profileRevision == resource.data.profileRevision
+          && audited('publication', uid, request.resource.data.revision, 'unpublished',
+            getAfter(auditPath('publication', uid, request.resource.data.revision)).data.reason)));
+      allow delete: if false;
+    }
+
+    match /calendars/{uid}/months/{monthId} {
+      function daysInMonth(year, month) {
+        return month == 2 ? ((year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) ? 29 : 28)
+          : (month in [4, 6, 9, 11] ? 30 : 31);
+      }
+      function shape(c) {
+        return c.keys().hasOnly(['ownerId', 'year', 'month', 'busyDays', 'confirmedAt'])
+          && c.ownerId == uid && c.year is int && c.year >= 2026 && c.year <= 2100
+          && c.month is int && c.month >= 1 && c.month <= 12
+          && monthId == string(c.year) + '-' + (c.month < 10 ? '0' : '') + string(c.month)
+          && c.busyDays is list && c.busyDays.size() <= 31 && c.busyDays.toSet().size() == c.busyDays.size()
+          && c.busyDays.hasOnly([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31])
+          && (daysInMonth(c.year, c.month) == 31 || !c.busyDays.hasAny([31]))
+          && (daysInMonth(c.year, c.month) >= 30 || !c.busyDays.hasAny([30]))
+          && (daysInMonth(c.year, c.month) >= 29 || !c.busyDays.hasAny([29]))
+          && c.confirmedAt == request.time;
+      }
+      allow read: if own(uid) || staff() || get(publicationPath(uid)).data.published == true;
+      allow create, update: if own(uid) && exists(/databases/$(database)/documents/profiles/$(uid)) && shape(request.resource.data);
+      allow delete: if false;
+    }
+
+    function calendarDate(value) { return text(value, 10) && value.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}'); }
+    match /accounts/{uid}/events/{eventId} {
+      allow read, delete: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['name', 'city', 'date', 'format', 'preferences', 'updatedAt'])
+        && text(request.resource.data.name, 120) && request.resource.data.name.size() > 0
+        && text(request.resource.data.city, 120) && calendarDate(request.resource.data.date)
+        && text(request.resource.data.format, 120) && text(request.resource.data.preferences, 1000)
+        && request.resource.data.updatedAt == request.time;
+    }
+    function matchRequest(r) {
+      return r is map && r.keys().hasOnly(['city', 'date', 'event_format', 'category', 'budget_kzt', 'hours', 'language', 'preferences'])
+        && text(r.city, 120) && calendarDate(r.date) && text(r.event_format, 120)
+        && text(r.category, 120) && r.budget_kzt is int && r.budget_kzt > 0 && r.budget_kzt <= 1000000000
+        && (r.hours == null || (r.hours is number && r.hours > 0 && r.hours <= 48))
+        && (r.language == null || text(r.language, 120)) && text(r.preferences, 1000);
+    }
+    function snapshot(s) {
+      return s is map && s.keys().hasOnly(['id', 'anon_name', 'city', 'categories', 'price_from_kzt', 'event_formats', 'languages', 'busy_dates', 'description', 'max_hours', 'synthetic', 'city_imputed', 'price_imputed', 'is_live', 'contact', 'portfolio_urls'])
+        && text(s.id, 128) && text(s.anon_name, 120) && text(s.description, 5000)
+        && s.busy_dates is list && s.busy_dates.size() <= 366
+        && s.portfolio_urls is list && s.portfolio_urls.size() <= 5 && s.is_live == true
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(s.id));
+    }
+    function entry(e) {
+      return e is map && e.keys().hasOnly(['contractor', 'explanation'])
+        && snapshot(e.contractor) && text(e.explanation, 5000);
+    }
+    match /accounts/{uid}/selections/{selectionId} {
+      allow read, delete: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['eventId', 'name', 'request', 'entries', 'savedAt'])
+        && text(request.resource.data.eventId, 128)
+        && exists(/databases/$(database)/documents/accounts/$(uid)/events/$(request.resource.data.eventId))
+        && text(request.resource.data.name, 120) && matchRequest(request.resource.data.request)
+        && request.resource.data.entries is list && request.resource.data.entries.size() <= 3
+        && (request.resource.data.entries.size() < 1 || entry(request.resource.data.entries[0]))
+        && (request.resource.data.entries.size() < 2 || entry(request.resource.data.entries[1]))
+        && (request.resource.data.entries.size() < 3 || entry(request.resource.data.entries[2]))
+        && request.resource.data.savedAt == request.time;
+    }
+    match /accounts/{uid}/favorites/{contractorId} {
+      allow read, delete: if own(uid);
+      allow create, update: if own(uid)
+        && request.resource.data.keys().hasOnly(['contractor', 'savedAt'])
+        && snapshot(request.resource.data.contractor)
+        && request.resource.data.contractor.id == contractorId && request.resource.data.savedAt == request.time;
+    }
+
+    match /audit/{id} {
+      function coupled(a) {
+        let kind = a.resourceType;
+        let uid = a.resourceId;
+        return (kind == 'profile' && getAfter(/databases/$(database)/documents/profiles/$(uid)).data.revision == a.revision
+            && get(/databases/$(database)/documents/profiles/$(uid)).data.revision + 1 == a.revision
+            && get(/databases/$(database)/documents/profiles/$(uid)).data.status == 'pending'
+            && a.action in ['approved', 'changes_requested'] && request.auth.uid != uid
+            && getAfter(/databases/$(database)/documents/profiles/$(uid)).data.status == a.action
+            && getAfter(/databases/$(database)/documents/profiles/$(uid)).data.reason == a.reason
+            && getAfter(/databases/$(database)/documents/profiles/$(uid)).data.updatedAt == request.time
+            && staff())
+          || (kind == 'publication' && getAfter(publicationPath(uid)).data.revision == a.revision
+            && get(publicationPath(uid)).data.revision + 1 == a.revision && get(publicationPath(uid)).data.published == true
+            && getAfter(publicationPath(uid)).data.published == false && a.action == 'unpublished'
+            && getAfter(publicationPath(uid)).data.updatedAt == request.time && (own(uid) || staff()))
+          || (kind == 'account' && getAfter(accountPath(uid)).data.revision == a.revision
+            && get(accountPath(uid)).data.revision + 1 == a.revision
+            && get(accountPath(uid)).data.status != a.action
+            && getAfter(accountPath(uid)).data.status == a.action
+            && getAfter(accountPath(uid)).data.updatedAt == request.time && (own(uid) || admin()))
+          || (kind == 'staff' && getAfter(/databases/$(database)/documents/staffAccess/$(uid)).data.revision == a.revision
+            && a.action in ['moderator', 'none']
+            && (!exists(staffPath(uid)) ? (a.revision == 1 && a.action == 'moderator')
+              : (get(staffPath(uid)).data.revision + 1 == a.revision && get(staffPath(uid)).data.role != a.action))
+            && getAfter(/databases/$(database)/documents/staffAccess/$(uid)).data.role == a.action
+            && getAfter(/databases/$(database)/documents/staffAccess/$(uid)).data.updatedAt == request.time && admin());
+      }
+      allow read: if staff();
+      allow create: if active() && request.resource.data.keys().hasOnly(['actorId', 'action', 'resourceType', 'resourceId', 'revision', 'reason', 'createdAt'])
+        && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.resourceType in ['profile', 'publication', 'account', 'staff']
+        && text(request.resource.data.resourceId, 128) && request.resource.data.revision is int
+        && request.resource.data.revision > 0 && text(request.resource.data.reason, 1000)
+        && (request.resource.data.action == 'approved' || request.resource.data.reason.size() > 0)
+        && request.resource.data.createdAt == request.time
+        && id == request.resource.data.resourceType + '_' + request.resource.data.resourceId + '_' + string(request.resource.data.revision)
+        && coupled(request.resource.data);
+      allow update, delete: if false;
+    }
+  }
+}

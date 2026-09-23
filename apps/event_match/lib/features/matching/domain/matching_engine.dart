@@ -3,8 +3,13 @@ import 'models.dart';
 /// Deterministic baseline; independent of Flutter, network, clocks and randomness.
 class MatchingEngine {
   const MatchingEngine();
-  MatchResult match(List<Contractor> catalog, MatchRequest r) {
-    r.validate();
+  MatchResult match(
+    List<Contractor> catalog,
+    MatchRequest r, {
+    MatchDatePolicy datePolicy = const MatchDatePolicy.demo(),
+    Map<String, AvailabilityStatus> availability = const {},
+  }) {
+    r.validate(datePolicy: datePolicy);
     if (r.budget <= 0 ||
         (r.hours != null && (!r.hours!.isFinite || r.hours! <= 0))) {
       throw ArgumentError('Budget and duration must be positive.');
@@ -23,7 +28,14 @@ class MatchingEngine {
     final eligible = <Contractor>[];
     for (final c in pool) {
       // One first failure per profile: counts remain additive.
-      final reason = c.busyDates.contains(dateKey(r.date))
+      final state = c.isLive
+          ? (availability[c.id] ?? AvailabilityStatus.unconfirmed)
+          : (c.busyDates.contains(dateKey(r.date))
+                ? AvailabilityStatus.busy
+                : AvailabilityStatus.available);
+      final reason = state == AvailabilityStatus.unconfirmed
+          ? 'доступность не подтверждена'
+          : state == AvailabilityStatus.busy
           ? 'заняты на дату'
           : c.price > r.budget
           ? 'выше бюджета'
@@ -58,7 +70,9 @@ class MatchingEngine {
           .take(3)
           .map((c) {
             final facts = <String>[
-              'Свободен ${dateKey(r.date)}',
+              c.isLive
+                  ? 'Доступен ${dateKey(r.date)} по календарю подрядчика; это не бронирование'
+                  : 'Свободен ${dateKey(r.date)}',
               'берёт формат «${r.format}»',
               'цена от ${c.price} ₸ при бюджете ${r.budget} ₸',
               if (r.language != null) 'язык — ${r.language}',
