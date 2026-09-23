@@ -39,6 +39,7 @@ class ContractorCard extends StatelessWidget {
     this.onFavorite,
     this.favoriteTooltip,
     this.aiSummary,
+    this.summarySource,
     this.summaryPending = false,
     this.footer,
     this.favoriteBusy = false,
@@ -51,6 +52,7 @@ class ContractorCard extends StatelessWidget {
   final VoidCallback? onFavorite;
   final String? favoriteTooltip;
   final String? aiSummary;
+  final String? summarySource;
   final bool summaryPending;
   final Widget? footer;
   final bool favoriteBusy;
@@ -60,6 +62,16 @@ class ContractorCard extends StatelessWidget {
     final c = contractor;
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final matchingText = explanation ?? recommendation?.explanation;
+    final explanationKind = matchingText != null
+        ? ExplanationKind.matching
+        : ExplanationKind.services;
+    final textSource = matchingText != null
+        ? recommendation?.source
+        : aiSummary != null
+        ? summarySource
+        : null;
+    final unchecked = recommendation?.unchecked ?? const <String>[];
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
@@ -137,7 +149,9 @@ class ContractorCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       c.maxHours == null
-                          ? 'Без привязки к часам присутствия'
+                          ? c.isLive
+                                ? 'Длительность не указана'
+                                : 'Без привязки к часам присутствия'
                           : 'Продолжительность: до ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
                     ),
                     const SizedBox(height: 8),
@@ -147,24 +161,22 @@ class ContractorCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 16),
-                    if (explanation != null || aiSummary != null)
-                      AiExplanation(
-                        text: explanation ?? aiSummary!,
-                        generated:
-                            recommendation?.source == 'llm' ||
-                            (recommendation == null && aiSummary != null),
-                      )
-                    else
-                      Text(
-                        c.description,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyMedium,
-                      ),
+                    AiExplanation(
+                      text: matchingText ?? aiSummary ?? c.description,
+                      kind: explanationKind,
+                      source: textSource,
+                      maxLines: matchingText == null && aiSummary == null
+                          ? 3
+                          : null,
+                    ),
+                    if (unchecked.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ExplanationLimitations(items: unchecked),
+                    ],
                     if (summaryPending && aiSummary == null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'Готовим краткое объяснение…',
+                        'Готовим краткое описание услуг…',
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
@@ -192,10 +204,9 @@ class ContractorCard extends StatelessWidget {
                   onPressed: () => showContractorDetails(
                     context,
                     contractor: c,
-                    explanation: explanation ?? aiSummary,
-                    generated:
-                        recommendation?.source == 'llm' ||
-                        (recommendation == null && aiSummary != null),
+                    explanation: matchingText ?? aiSummary,
+                    explanationKind: explanationKind,
+                    source: textSource,
                     recommendation: recommendation,
                   ),
                   icon: const Icon(Icons.arrow_outward, size: 18),

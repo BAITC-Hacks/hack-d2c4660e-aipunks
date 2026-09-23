@@ -204,7 +204,7 @@ void main() {
   });
 
   test(
-    'manual results keep unsupported city and unknown hours honest',
+    'manual results honor demo null hours without requiring presence',
     () async {
       final absent = await basic.send(
         brief: initial.withField('city', 'Город вне каталога'),
@@ -228,10 +228,14 @@ void main() {
         ),
         action: show,
       );
-      expect(turn.result!.preliminary, true);
+      expect(turn.result!.preliminary, false);
+      expect(
+        turn.result!.recommendations.single.explanation,
+        contains('не привязана к часам присутствия'),
+      );
       expect(
         turn.result!.recommendations.single.unchecked,
-        contains('Длительность не подтверждена'),
+        isNot(contains('Длительность не подтверждена')),
       );
     },
   );

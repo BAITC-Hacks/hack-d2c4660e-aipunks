@@ -16,3 +16,4 @@ apps/api/data/*
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+*.admin-credentials.json

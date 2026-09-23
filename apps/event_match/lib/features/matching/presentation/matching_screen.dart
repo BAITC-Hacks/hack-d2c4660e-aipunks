@@ -317,6 +317,13 @@ class _MatchingScreenState extends State<MatchingScreen> {
         aiSummary: recommendations == null && aiEnabled
             ? summaries[profiles[i].id]
             : null,
+        // The summary service keeps only responses explicitly sourced as llm.
+        summarySource:
+            recommendations == null &&
+                aiEnabled &&
+                summaries.containsKey(profiles[i].id)
+            ? 'llm'
+            : null,
         summaryPending:
             recommendations == null &&
             aiEnabled &&

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:event_match/app/app.dart';
 import 'package:event_match/features/matching/data/catalog_repository.dart';
+import 'package:event_match/features/matching/presentation/widgets/ai_explanation.dart';
 import 'widget_test.dart' show MemoryCatalog;
 
 void main() {
@@ -87,6 +88,9 @@ void main() {
       await tester.tap(find.byKey(const Key('apply-filters')));
       await tester.pumpAndSettle();
       await capture('results');
+      await tester.ensureVisible(find.byType(AiExplanation).first);
+      await tester.pumpAndSettle();
+      await capture('result-explanations');
       expect(tester.takeException(), isNull);
     }, skip: !enabled);
   }

@@ -1,5 +1,6 @@
 import '../../matching/data/catalog_repository.dart';
 import '../../matching/domain/models.dart';
+import '../../matching/domain/explanation_policy.dart';
 import '../../matching/domain/catalog_version.dart';
 import '../domain/assistant_models.dart';
 import '../domain/assistant_service.dart';
@@ -184,7 +185,7 @@ class BasicAssistantService implements AssistantService {
         'Подбор кнопками: проверяем условия, пожелания по стилю не анализируются.',
       ],
       datasetVersion: catalogVersion(catalog),
-      algorithmVersion: 'basic-1',
+      algorithmVersion: 'basic-2',
     );
   }
 
@@ -335,6 +336,7 @@ class BasicAssistantService implements AssistantService {
         : eligible.isEmpty
         ? 'Кандидаты есть, но никто не проходит по условиям. $reasons.'
         : 'Подходят ${eligible.length} из ${pool.length}; показано ${eligible.take(3).length}.'
+              '${b.dateInCalendar && eligible.isNotEmpty ? ' По календарю свободны ${b.date}.' : ''}'
               '${reasons.isEmpty ? '' : ' Исключены: $reasons.'}'
               '${eligible.length < 3 && reasons.isEmpty ? ' В этой категории города всего ${pool.length} профилей.' : ''}';
     return AssistantResult(
@@ -346,7 +348,8 @@ class BasicAssistantService implements AssistantService {
       summary: summary,
       preliminary:
           unchecked.isNotEmpty ||
-          (b.hours != null && eligible.take(3).any((c) => c.maxHours == null)),
+          (b.hours != null &&
+              eligible.take(3).any((c) => c.isLive && c.maxHours == null)),
       unchecked: unchecked,
       recommendations: [
         for (final c in eligible.take(3))
@@ -354,20 +357,14 @@ class BasicAssistantService implements AssistantService {
             contractor: c,
             unchecked: [
               ...unchecked,
-              if (b.hours != null && c.maxHours == null)
+              if (b.hours != null && c.maxHours == null && c.isLive)
                 'Длительность не подтверждена',
             ],
             explanation:
-                '${b.dateInCalendar ? 'Свободен по календарю ${b.date}; ' : ''}берёт формат «${b.eventFormat}», цена от ${c.price} ₸${b.budgetKzt != null && b.budgetScope == 'contractor' ? ' при бюджете ${b.budgetKzt} ₸' : ''}. В профиле: «${_excerpt(c.description)}».',
+                '${requestedFitFacts(c, format: b.eventFormat!, language: b.language, hours: b.hours).first}. '
+                '${priceFit(c, b.budgetScope == 'contractor' ? b.budgetKzt : null)}.',
           ),
       ],
     );
-  }
-
-  String _excerpt(String text) {
-    final clean = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (clean.length <= 180) return clean;
-    final cut = clean.lastIndexOf(' ', 180);
-    return '${clean.substring(0, cut > 0 ? cut : 180)}…';
   }
 }
