@@ -44,7 +44,7 @@ Future<void> showMessagesPanel(
   Contractor? contractor,
 }) => showSidePanel<void>(
   context,
-  barrierLabel: trNullable(context, 'Закрыть сообщения'),
+  barrierLabel: tr(context, 'Закрыть сообщения'),
   builder: (_) => ListenableBuilder(
     listenable: session,
     builder: (context, _) => MessagesPanel(

@@ -417,7 +417,7 @@ void main() {
         expect(find.textContaining('%'), findsNothing);
         expect(tester.takeException(), isNull);
         final details = find.byKey(
-          const ValueKey('assistant-details-explanation-test'),
+          const ValueKey('profile-explanation-test'),
         );
         await tester.ensureVisible(details);
         await tester.tap(details);

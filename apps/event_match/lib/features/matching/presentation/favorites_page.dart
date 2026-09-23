@@ -15,7 +15,7 @@ Future<MatchRequest?> showFavoritesPanel(
   required bool catalogAvailable,
 }) => showSidePanel<MatchRequest>(
   context,
-  barrierLabel: trNullable(context, 'Закрыть избранное'),
+  barrierLabel: tr(context, 'Закрыть избранное'),
   builder: (_) => ScaffoldMessenger(
     child: FavoritesPage(
       controller: controller,

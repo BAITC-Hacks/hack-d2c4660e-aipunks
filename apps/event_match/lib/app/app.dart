@@ -365,7 +365,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
     }
     showSidePanel<void>(
       context,
-      barrierLabel: trNullable(context, 'Закрыть помощника'),
+      barrierLabel: tr(context, 'Закрыть помощника'),
       builder: (panelContext) => _assistantPanel(
         panelContext,
         close: () => Navigator.of(panelContext).pop(),

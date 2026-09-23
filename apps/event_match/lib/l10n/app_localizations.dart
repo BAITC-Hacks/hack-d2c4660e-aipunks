@@ -35,7 +35,7 @@ class AppLanguage extends ValueNotifier<Locale> {
 }
 
 String tr(BuildContext context, String source) =>
-    translate(source, Localizations.localeOf(context).languageCode);
+    translate(source, (Localizations.maybeLocaleOf(context) ?? AppLanguage.instance.value).languageCode);
 String? trNullable(BuildContext context, String? source) =>
     source == null ? null : tr(context, source);
 FormFieldValidator<T>? localizeValidator<T>(BuildContext context, FormFieldValidator<T>? validator) =>
