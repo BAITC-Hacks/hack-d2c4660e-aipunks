@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:event_match/app/app.dart';
 import 'package:event_match/features/matching/data/catalog_repository.dart';
@@ -17,11 +18,40 @@ void main() {
   setUpAll(() async {
     repository = MemoryCatalog(await AssetCatalogRepository().load());
   });
+  testWidgets('catalog shortcut transfers focus and Escape cancels filters', (
+    tester,
+  ) async {
+    await tester.pumpWidget(EventMatchApp(repository: repository));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Смотреть каталог'));
+    await tester.pumpAndSettle();
+    final heading = tester.widget<Focus>(
+      find.byKey(const Key('catalog-heading')),
+    );
+    expect(heading.focusNode!.hasFocus, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
+    await tester.tap(find.byKey(const Key('open-filters')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('apply-filters')), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('apply-filters')), findsNothing);
+    expect(find.text('Каталог · 66 профилей'), findsOneWidget);
+  });
   for (final size in [
+    const Size(320, 740),
     const Size(375, 812),
     const Size(812, 375),
     const Size(768, 1024),
     const Size(1024, 768),
+    const Size(699, 900),
+    const Size(700, 900),
+    const Size(1280, 600),
     const Size(1440, 900),
   ]) {
     testWidgets('search works without overflow at $size', (tester) async {

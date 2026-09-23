@@ -64,6 +64,18 @@ flutter:
   assets:
     - assets/data/demo.jsonl
     - assets/data/catalog.jsonl
+    - assets/images/event-table.jpg
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope.ttf
+    - family: CormorantGaramond
+      fonts:
+        - asset: assets/fonts/CormorantGaramond-Italic.ttf
+          style: italic
 
   # To add assets to your application, add an assets section, like this:
   # assets:
