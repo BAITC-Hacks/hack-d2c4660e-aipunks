@@ -232,7 +232,7 @@ void main() {
   });
   for (final destination in [
     '/client/selections',
-    '/client/selections?event=event-42',
+    '/client/planner?event=event-42',
   ]) {
     testWidgets('cold bootstrap preserves $destination through auth redirect', (
       tester,

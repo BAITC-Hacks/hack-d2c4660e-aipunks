@@ -389,7 +389,10 @@ class FirestoreWorkspaceRepository extends WorkspaceRepository {
     if (selections.docs.isNotEmpty) {
       throw StateError('Сначала удалите подборки этого мероприятия');
     }
-    await _doc('accounts/$uid/events/$eventId').delete();
+    final batch = db.batch();
+    batch.delete(_doc('accounts/$uid/eventPlans/$eventId'));
+    batch.delete(_doc('accounts/$uid/events/$eventId'));
+    await batch.commit();
   }
 
   @override

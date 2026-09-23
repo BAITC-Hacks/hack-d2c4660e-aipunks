@@ -7,6 +7,9 @@ import '../features/auth/presentation/settings_page.dart';
 import '../features/matching/data/catalog_repository.dart';
 import '../features/matching/presentation/matching_screen.dart';
 import '../features/matching/domain/recommendation_service.dart';
+import '../features/planning/data/firestore_event_plan_repository.dart';
+import '../features/planning/domain/event_plan_repository.dart';
+import '../features/planning/presentation/event_plan_page.dart';
 import '../features/workspace/domain/workspace_repository.dart';
 import '../features/workspace/presentation/admin_page.dart';
 import '../features/workspace/presentation/catalog_page.dart';
@@ -24,12 +27,14 @@ class EventMatchApp extends StatefulWidget {
     this.recommendationService,
     this.session,
     this.workspace,
+    this.plans,
     this.initialLocation,
   });
   final CatalogRepository? repository;
   final RecommendationService? recommendationService;
   final SessionController? session;
   final WorkspaceRepository? workspace;
+  final EventPlanRepository? plans;
   final String? initialLocation;
   @override
   State<EventMatchApp> createState() => _EventMatchAppState();
@@ -37,6 +42,7 @@ class EventMatchApp extends StatefulWidget {
 
 class _EventMatchAppState extends State<EventMatchApp> {
   GoRouter? _router;
+  EventPlanRepository? _plans;
   final CatalogRepository _demoRepository = AssetCatalogRepository();
   @override
   void initState() {
@@ -149,6 +155,19 @@ class _EventMatchAppState extends State<EventMatchApp> {
               path: '/client/:section',
               builder: (context, state) {
                 final section = state.pathParameters['section']!;
+                if (section == 'planner') {
+                  return EventPlanPage(
+                    key: ValueKey(
+                      'planner:${state.uri.queryParameters['event']}',
+                    ),
+                    workspace: workspace,
+                    plans: _plans ??=
+                        widget.plans ?? FirestoreEventPlanRepository(),
+                    uid: session.uid!,
+                    initialEventId: state.uri.queryParameters['event'],
+                    onOpenEvents: () => context.go('/client/events'),
+                  );
+                }
                 return section == 'settings'
                     ? settings()
                     : ClientPage(
@@ -156,6 +175,12 @@ class _EventMatchAppState extends State<EventMatchApp> {
                         repository: workspace,
                         uid: session.uid!,
                         section: section,
+                        onOpenPlan: (eventId) => context.go(
+                          Uri(
+                            path: '/client/planner',
+                            queryParameters: {'event': eventId},
+                          ).toString(),
+                        ),
                       );
               },
             ),

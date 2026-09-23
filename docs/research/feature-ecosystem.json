@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-23",
+  "product": "Event Match",
+  "market": "Казахстан",
+  "scope": "Product patterns, own implementation and proposed roadmap; no third-party integrations.",
+  "statusLegend": {
+    "existing": "В рабочем дереве до этой работы",
+    "added_in_this_change": "Добавлено этой работой; production deployment не выполнен",
+    "planned": "Предложено, не реализовано"
+  },
+  "sources": [
+    {
+      "id": "cvent",
+      "title": "Cvent Supplier Network",
+      "url": "https://www.cvent.com/en/event-marketing-management/cvent-supplier-network",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "gigsalad",
+      "title": "GigSalad Quotes",
+      "url": "https://help.gigsalad.com/article/39-getting-quotes",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "the_bash",
+      "title": "The Bash Help",
+      "url": "https://www.thebash.com/help",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "tagvenue",
+      "title": "Tagvenue Pricing",
+      "url": "https://support.tagvenue.com/hc/en-gb/articles/360018256258-How-do-I-add-my-prices-and-opening-hours",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "the_knot",
+      "title": "The Knot Checklist",
+      "url": "https://www.theknot.com/wedding-checklist",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "honeybook",
+      "title": "HoneyBook Smart Files",
+      "url": "https://help.honeybook.com/en/articles/5776807-the-differences-between-smart-files-and-legacy-files",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "thumbtack",
+      "title": "Thumbtack How It Works",
+      "url": "https://www.thumbtack.com/how-it-works",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    },
+    {
+      "id": "weddingwire",
+      "title": "WeddingWire Storefront Pricing",
+      "url": "https://vendorsupport.weddingwire.com/hc/en-us/articles/115005402523-Storefront-Pricing-on-WeddingWire",
+      "checkedAt": "2026-09-23",
+      "evidence": "official_public_documentation"
+    }
+  ],
+  "features": [
+    {
+      "id": "event_brief",
+      "name": "Бриф мероприятия",
+      "status": "existing",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "ClientEvent"
+      ],
+      "dependsOn": [],
+      "inspiredBy": [
+        "cvent",
+        "honeybook"
+      ],
+      "decision": "Один набор города, даты, формата и пожеланий для категорий события."
+    },
+    {
+      "id": "profile_calendar",
+      "name": "Профиль и свежесть календаря",
+      "status": "existing",
+      "priority": "P0",
+      "actor": "provider",
+      "data": [
+        "PublishedProfile",
+        "CalendarMonth"
+      ],
+      "dependsOn": [],
+      "inspiredBy": [
+        "the_bash",
+        "gigsalad"
+      ],
+      "decision": "Публикация после модерации и явное подтверждение календаря."
+    },
+    {
+      "id": "explainable_match",
+      "name": "Объяснимый подбор",
+      "status": "existing",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "MatchRequest",
+        "Recommendation"
+      ],
+      "dependsOn": [
+        "event_brief",
+        "profile_calendar"
+      ],
+      "inspiredBy": [],
+      "decision": "Не более трёх рекомендаций, детерминизм и причины отсутствия результатов. Основано на задаче хакатона."
+    },
+    {
+      "id": "saved_selection",
+      "name": "Подборки и избранное",
+      "status": "existing",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "SavedSelection",
+        "Favorite"
+      ],
+      "dependsOn": [
+        "explainable_match"
+      ],
+      "inspiredBy": [
+        "the_bash",
+        "cvent"
+      ],
+      "decision": "Исторические снимки не подменяют текущие сведения."
+    },
+    {
+      "id": "comparison",
+      "name": "Актуальное сравнение",
+      "status": "added_in_this_change",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "PlanCandidate",
+        "PlanSelectionReview"
+      ],
+      "dependsOn": [
+        "saved_selection",
+        "profile_calendar"
+      ],
+      "inspiredBy": [
+        "cvent",
+        "gigsalad"
+      ],
+      "decision": "Текущая цена и календарь рядом с исходным объяснением; непригодные варианты блокируются."
+    },
+    {
+      "id": "team_plan",
+      "name": "Выбор команды",
+      "status": "added_in_this_change",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "EventPlan",
+        "PlanChoice"
+      ],
+      "dependsOn": [
+        "comparison"
+      ],
+      "inspiredBy": [
+        "the_knot"
+      ],
+      "decision": "Один кандидат на категорию, повторный подрядчик не удваивает смету."
+    },
+    {
+      "id": "budget",
+      "name": "Бюджет события",
+      "status": "added_in_this_change",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "EventPlanReview"
+      ],
+      "dependsOn": [
+        "team_plan"
+      ],
+      "inspiredBy": [
+        "the_knot",
+        "tagvenue"
+      ],
+      "decision": "Нижняя оценка по стартовым ценам. При нерешённых позициях полный остаток неизвестен."
+    },
+    {
+      "id": "brief_draft",
+      "name": "Черновик обращения",
+      "status": "added_in_this_change",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "ClientEvent",
+        "MatchRequest"
+      ],
+      "dependsOn": [
+        "comparison"
+      ],
+      "inspiredBy": [
+        "honeybook",
+        "gigsalad"
+      ],
+      "decision": "Редактирование и копирование без отправки или фиктивного статуса брони."
+    },
+    {
+      "id": "checklist",
+      "name": "Checklist и заметки",
+      "status": "added_in_this_change",
+      "priority": "P0",
+      "actor": "client",
+      "data": [
+        "EventPlan"
+      ],
+      "dependsOn": [
+        "team_plan"
+      ],
+      "inspiredBy": [
+        "the_knot"
+      ],
+      "decision": "Приватные ручные отметки и заметки с защитой версий документа."
+    },
+    {
+      "id": "requests",
+      "name": "Запросы и входящие",
+      "status": "planned",
+      "priority": "P1",
+      "actor": "client_provider",
+      "data": [
+        "ServiceRequest"
+      ],
+      "dependsOn": [
+        "brief_draft"
+      ],
+      "inspiredBy": [
+        "gigsalad",
+        "thumbtack"
+      ],
+      "decision": "Участники, снимок брифа, статусы и идемпотентность отправки."
+    },
+    {
+      "id": "quotes",
+      "name": "Версии предложений",
+      "status": "planned",
+      "priority": "P1",
+      "actor": "client_provider",
+      "data": [
+        "Quote"
+      ],
+      "dependsOn": [
+        "requests"
+      ],
+      "inspiredBy": [
+        "gigsalad",
+        "cvent"
+      ],
+      "decision": "Полная цена, состав, исключения, условия и срок действия."
+    },
+    {
+      "id": "pricing",
+      "name": "Пакеты и параметры категорий",
+      "status": "planned",
+      "priority": "P1",
+      "actor": "provider",
+      "data": [
+        "ServicePackage",
+        "PricingModel"
+      ],
+      "dependsOn": [
+        "profile_calendar"
+      ],
+      "inspiredBy": [
+        "tagvenue",
+        "weddingwire"
+      ],
+      "decision": "Часы, гости, вместимость и доплаты как типизированные данные."
+    },
+    {
+      "id": "shared_planning",
+      "name": "Совместное планирование",
+      "status": "planned",
+      "priority": "P2",
+      "actor": "client_collaborator",
+      "data": [
+        "EventMember",
+        "Invitation"
+      ],
+      "dependsOn": [
+        "team_plan"
+      ],
+      "inspiredBy": [
+        "cvent"
+      ],
+      "decision": "Явный доступ к событию по приглашению, роли и журнал изменений."
+    },
+    {
+      "id": "booking",
+      "name": "Двустороннее бронирование",
+      "status": "planned",
+      "priority": "P2",
+      "actor": "client_provider",
+      "data": [
+        "Booking"
+      ],
+      "dependsOn": [
+        "quotes",
+        "pricing"
+      ],
+      "inspiredBy": [
+        "gigsalad",
+        "the_bash"
+      ],
+      "decision": "Подтверждение обеих сторон и защита от конфликта дат."
+    },
+    {
+      "id": "verified_reviews",
+      "name": "Отзывы по завершённой услуге",
+      "status": "planned",
+      "priority": "P2",
+      "actor": "client",
+      "data": [
+        "Review"
+      ],
+      "dependsOn": [
+        "booking"
+      ],
+      "inspiredBy": [
+        "the_bash"
+      ],
+      "decision": "Проверяемая связь автора с выполненной услугой."
+    },
+    {
+      "id": "analytics",
+      "name": "Аналитика воронки",
+      "status": "planned",
+      "priority": "P3",
+      "actor": "admin",
+      "data": [
+        "JourneyEvent"
+      ],
+      "dependsOn": [
+        "requests",
+        "quotes"
+      ],
+      "inspiredBy": [
+        "cvent"
+      ],
+      "decision": "Реальные исходы и агрегаты; не выводить рыночную статистику из синтетического каталога."
+    }
+  ]
+}

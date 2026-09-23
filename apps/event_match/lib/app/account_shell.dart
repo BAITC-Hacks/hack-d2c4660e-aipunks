@@ -89,6 +89,11 @@ class AccountShell extends StatelessWidget {
             icon: Icons.auto_awesome_outlined,
           ),
           (
+            path: '/client/planner',
+            title: 'План события',
+            icon: Icons.assignment_outlined,
+          ),
+          (
             path: '/client/favorites',
             title: 'Избранное',
             icon: Icons.favorite_outline,

@@ -13,9 +13,11 @@ class ClientPage extends StatefulWidget {
     required this.repository,
     required this.uid,
     this.section = 'events',
+    this.onOpenPlan,
   });
   final WorkspaceRepository repository;
   final String uid, section;
+  final ValueChanged<String>? onOpenPlan;
   @override
   State<ClientPage> createState() => _ClientPageState();
 }
@@ -276,6 +278,15 @@ class _ClientPageState extends State<ClientPage> {
                     outlined: true,
                     onPressed: () => _editEvent(e),
                   ),
+                  if (widget.onOpenPlan != null)
+                    WorkspaceAction(
+                      label: 'План команды и бюджета',
+                      icon: Icons.assignment_outlined,
+                      outlined: true,
+                      onPressed: () async {
+                        widget.onOpenPlan!(e.id);
+                      },
+                    ),
                   WorkspaceAction(
                     label: 'Удалить',
                     icon: Icons.delete_outline,
@@ -397,6 +408,15 @@ class _ClientPageState extends State<ClientPage> {
                   }
                 },
               ),
+              if (event != null && widget.onOpenPlan != null)
+                WorkspaceAction(
+                  label: 'Сравнить и выбрать в план',
+                  icon: Icons.compare_arrows,
+                  outlined: true,
+                  onPressed: () async {
+                    widget.onOpenPlan!(event.id);
+                  },
+                ),
             ],
           ),
           const SizedBox(height: 16),

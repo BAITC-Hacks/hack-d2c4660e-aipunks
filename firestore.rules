@@ -232,6 +232,49 @@ service cloud.firestore {
         && request.resource.data.contractor.id == contractorId && request.resource.data.savedAt == request.time;
     }
 
+    // A private planning decision is a reference, never a booking or quote.
+    // The planner resolves references against current selections and profiles.
+    function planChoice(c) {
+      return c is map && c.keys().hasOnly(['selectionId', 'contractorId'])
+        && c.selectionId is string && c.selectionId.matches('[^/]{1,160}')
+        && !(c.selectionId in ['.', '..'])
+        && c.contractorId is string && c.contractorId.matches('[^/]{1,160}')
+        && !(c.contractorId in ['.', '..']);
+    }
+    function planChoices(c) {
+      return c is map && c.size() <= 10
+        && c.keys().hasOnly(['Ведущий', 'Фотограф', 'Банкетный зал', 'Флорист', 'Декоратор', 'Подарки и сувениры', 'Ведущий церемонии', 'Фото и видеобудки', 'Отель', 'Инструменталист'])
+        && (!('Ведущий' in c) || planChoice(c['Ведущий']))
+        && (!('Фотограф' in c) || planChoice(c['Фотограф']))
+        && (!('Банкетный зал' in c) || planChoice(c['Банкетный зал']))
+        && (!('Флорист' in c) || planChoice(c['Флорист']))
+        && (!('Декоратор' in c) || planChoice(c['Декоратор']))
+        && (!('Подарки и сувениры' in c) || planChoice(c['Подарки и сувениры']))
+        && (!('Ведущий церемонии' in c) || planChoice(c['Ведущий церемонии']))
+        && (!('Фото и видеобудки' in c) || planChoice(c['Фото и видеобудки']))
+        && (!('Отель' in c) || planChoice(c['Отель']))
+        && (!('Инструменталист' in c) || planChoice(c['Инструменталист']));
+    }
+    match /accounts/{uid}/eventPlans/{eventId} {
+      function shape(p) {
+        return p.keys().hasOnly(['schemaVersion', 'totalBudgetKzt', 'choices', 'completedTaskIds', 'notes', 'revision', 'updatedAt'])
+          && p.schemaVersion is int && p.schemaVersion == 1 && p.revision is int && p.revision > 0
+          && (p.totalBudgetKzt == null || (p.totalBudgetKzt is int && p.totalBudgetKzt > 0 && p.totalBudgetKzt <= 1000000000))
+          && planChoices(p.choices) && text(p.notes, 2000)
+          && p.completedTaskIds is list && p.completedTaskIds.size() <= 3
+          && p.completedTaskIds.toSet().size() == p.completedTaskIds.size()
+          && p.completedTaskIds.hasOnly(['confirm_scope', 'confirm_final_price', 'confirm_terms'])
+          && p.updatedAt == request.time;
+      }
+      allow read, delete: if own(uid);
+      allow create: if own(uid) && request.resource.data.revision == 1
+        && existsAfter(/databases/$(database)/documents/accounts/$(uid)/events/$(eventId))
+        && shape(request.resource.data);
+      allow update: if own(uid) && request.resource.data.revision == resource.data.revision + 1
+        && existsAfter(/databases/$(database)/documents/accounts/$(uid)/events/$(eventId))
+        && shape(request.resource.data);
+    }
+
     match /audit/{id} {
       function coupled(a) {
         let kind = a.resourceType;

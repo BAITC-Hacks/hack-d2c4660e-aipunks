@@ -95,12 +95,13 @@ async function deleteAccount() {
   if (!lockDoc.exists && (account?.status !== 'deactivated' || account.deletionRequested !== true)) {
     throw new Error('Requires the owner’s recorded request: status=deactivated and deletionRequested=true');
   }
-  const [events, selections, favorites, calendars] = await Promise.all([
+  const [events, selections, favorites, calendars, eventPlans] = await Promise.all([
     accountRef.collection('events').get(), accountRef.collection('selections').get(),
     accountRef.collection('favorites').get(), store.collection(`calendars/${uid}/months`).get(),
+    accountRef.collection('eventPlans').get(),
   ]);
   console.log(JSON.stringify({ project: values.project, command, uid, execute: values.execute, resuming: lockDoc.exists,
-    ownDocuments: { events: events.size, selections: selections.size, favorites: favorites.size, calendarMonths: calendars.size },
+    ownDocuments: { events: events.size, selections: selections.size, favorites: favorites.size, calendarMonths: calendars.size, eventPlans: eventPlans.size },
     additionalCleanup: 'contractor snapshots in other accounts, profile, publication, staff role, audit identifiers, Firebase Auth',
   }, null, 2));
   if (!values.execute) return;
