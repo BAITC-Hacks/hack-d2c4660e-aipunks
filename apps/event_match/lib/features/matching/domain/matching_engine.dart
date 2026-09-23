@@ -13,7 +13,11 @@ const scoreWeights = {
 class MatchingEngine {
   const MatchingEngine();
 
-  List<Evaluation> evaluate(List<Contractor> catalog, MatchRequest request) {
+  List<Evaluation> evaluate(
+    List<Contractor> catalog,
+    MatchRequest request, {
+    Map<String, AvailabilityStatus> availability = const {},
+  }) {
     final r = request.normalized();
     return catalog
         .where(
@@ -40,7 +44,14 @@ class MatchingEngine {
               Violation.language,
             if (r.hours != null && c.maxHours != null && c.maxHours! < r.hours!)
               Violation.hours,
-            if (c.busyDates.contains(dateKey(r.date))) Violation.busy,
+            if (c.isLive
+                ? availability[c.id] == AvailabilityStatus.busy
+                : c.busyDates.contains(dateKey(r.date)))
+              Violation.busy,
+            if (c.isLive &&
+                (availability[c.id] == null ||
+                    availability[c.id] == AvailabilityStatus.unconfirmed))
+              Violation.unconfirmed,
             if (c.price > r.budget) Violation.budget,
           }),
         )
@@ -85,10 +96,15 @@ class MatchingEngine {
       ) *
       f['provenance']!;
 
-  MatchResult match(List<Contractor> catalog, MatchRequest request) {
-    request.validate();
+  MatchResult match(
+    List<Contractor> catalog,
+    MatchRequest request, {
+    MatchDatePolicy datePolicy = const MatchDatePolicy.demo(),
+    Map<String, AvailabilityStatus> availability = const {},
+  }) {
+    request.validate(datePolicy: datePolicy);
     final r = request.normalized();
-    final evaluations = evaluate(catalog, r);
+    final evaluations = evaluate(catalog, r, availability: availability);
     final eligible = evaluations
         .where((e) => e.passed)
         .map((e) => e.contractor)
@@ -111,6 +127,7 @@ class MatchingEngine {
       Violation.hours: 'не подходят по длительности',
       Violation.busy: 'заняты на дату',
       Violation.budget: 'выше бюджета',
+      Violation.unconfirmed: 'доступность не подтверждена',
     };
     final rejected = Violation.values
         .where(counts.containsKey)
@@ -155,7 +172,7 @@ class MatchingEngine {
       recommendations.add(
         Recommendation(
           c,
-          '$main. $fit.',
+          '$main. $fit.${datePolicy.isLive ? ' Доступность по календарю — это не бронирование.' : ''}',
           score: score(featureMap[c.id]!),
           features: featureMap[c.id]!,
           mainFact: main,
@@ -167,10 +184,12 @@ class MatchingEngine {
     return MatchResult(
       outcome,
       recommendations,
-      summary,
+      datePolicy.isLive
+          ? '$summary Доступность по календарю, не бронирование.'
+          : summary,
       evaluations: evaluations,
       catalogVersion: catalogVersion(catalog),
-      relaxations: eligible.length < 3
+      relaxations: !datePolicy.isLive && eligible.length < 3
           ? _relaxations(catalog, r, evaluations)
           : const [],
       notice: r.preferences.trim().isEmpty

@@ -42,10 +42,7 @@ void main() {
       expect(find.text('Введите целое число больше нуля'), findsOneWidget);
       await tester.enterText(find.byKey(const Key('budget-input')), '1000000');
       await tester.enterText(find.byKey(const Key('hours-input')), '4');
-      await tester.enterText(
-        find.byKey(const Key('preferences-input')),
-        'Камерная свадьба',
-      );
+      expect(find.byKey(const Key('preferences-input')), findsNothing);
       await tapKey('language-select');
       await tester.tap(find.text('русский').last);
       await tester.pumpAndSettle();
@@ -55,7 +52,6 @@ void main() {
       expect(find.text('русский'), findsOneWidget);
       await tapKey('advanced-filters-toggle');
       expect(value('hours-input'), '4.0');
-      expect(value('preferences-input'), 'Камерная свадьба');
       await tester.enterText(find.byKey(const Key('hours-input')), '-1');
       await tapKey('apply-filters');
       expect(find.text('Введите число больше нуля'), findsOneWidget);
@@ -65,7 +61,6 @@ void main() {
       expect(find.text('Каталог · 500 профилей'), findsOneWidget);
       await tapKey('advanced-filters-toggle');
       expect(value('hours-input'), isEmpty);
-      expect(value('preferences-input'), isEmpty);
       expect(tester.takeException(), isNull);
     },
   );

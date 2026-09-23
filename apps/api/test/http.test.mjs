@@ -46,6 +46,20 @@ test('HTTP catalog, CORS, version checks, forged selection and missing-key fallb
     assert.equal((await summarize({...summaryBody,ids:['unknown']})).status,400);
     assert.equal((await summarize({...summaryBody,ids:Array(4).fill(summaryBody.ids[0])})).status,400);
     assert.equal((await summarize({...summaryBody,catalog_version:'stale'})).status,409);
+    const api=(path,payload,session)=>fetch(`${url}/v1/${path}`,{method:'POST',headers:{'Content-Type':'application/json',...(session?{Authorization:`Bearer ${session}`}:{})},body:JSON.stringify(payload)});
+    const registered=await api('auth',{op:'register',name:'HTTP test',email:'http@example.test',password:'local-password-test'});
+    assert.equal(registered.status,200);const account=(await registered.json()).data;
+    assert.equal((await api('workspace',{op:'account'},account.token)).status,200);
+    assert.equal((await api('workspace',{op:'listAccounts'},account.token)).status,403);
+    assert.equal((await api('workspace',{op:'listEvents',uid:'foreign'},account.token)).status,403);
+    assert.equal((await api('messages',{op:'list'})).status,401);
+    assert.deepEqual((await (await api('messages',{op:'list'},account.token)).json()).data,[]);
+    const brief={city:null,category:null,event_format:null,date:null,budget_kzt:null,hours:null,language:null,preferences:[],skipped_fields:[],excluded_ids:[],budget_scope:'contractor'};
+    const turn=await api('assistant',{brief,action:{id:'manual',label:'Фотограф',type:'set_field',field:'category',value:'Фотограф'}});
+    assert.equal(turn.status,200);const answer=await turn.json();assert.equal(answer.brief.category,'Фотограф');assert.ok(answer.actions.length>0);
+    assert.equal((await api('assistant',{brief,message:'Кого посоветуете?'})).status,503);
+    await api('auth',{op:'logout'},account.token);
+    assert.equal((await api('workspace',{op:'account'},account.token)).status,401);
   } finally {
     const exited=new Promise(resolve=>child.once('exit',resolve));child.kill();await exited;
     rmSync(directory,{recursive:true,force:true});

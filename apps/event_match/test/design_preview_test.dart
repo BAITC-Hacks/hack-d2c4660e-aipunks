@@ -12,6 +12,7 @@ import 'widget_test.dart' show MemoryCatalog;
 void main() {
   const enabled = bool.fromEnvironment('VISUAL_PREVIEW');
   for (final size in [
+    const Size(1706, 1000),
     const Size(1440, 1100),
     const Size(390, 1000),
     const Size(768, 1024),
@@ -72,6 +73,7 @@ void main() {
       );
       await tester.ensureVisible(profile);
       await tester.pumpAndSettle();
+      await capture('catalog-cards');
       await tester.tap(profile);
       await tester.pumpAndSettle();
       await capture('profile-panel');

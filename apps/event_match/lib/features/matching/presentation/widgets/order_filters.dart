@@ -7,14 +7,18 @@ class OrderFilters extends StatefulWidget {
   const OrderFilters({
     super.key,
     required this.catalog,
-    required this.supportsPreferences,
     this.initial,
     this.embedded = false,
     this.onApply,
     this.onCancel,
+    this.supportsPreferences = false,
+    this.datePolicy = const MatchDatePolicy.demo(),
+    this.lockEventDetails = false,
   });
   final List<Contractor> catalog;
-  final bool supportsPreferences, embedded;
+  final bool embedded;
+  final bool supportsPreferences, lockEventDetails;
+  final MatchDatePolicy datePolicy;
   final MatchRequest? initial;
   final ValueChanged<MatchRequest>? onApply;
   final VoidCallback? onCancel;
@@ -27,7 +31,7 @@ class _OrderFiltersState extends State<OrderFilters> {
   final form = GlobalKey<FormState>();
   late String city, category, format, language;
   late DateTime date;
-  late final TextEditingController budget, hours, preferences;
+  late final TextEditingController budget, hours;
 
   @override
   void initState() {
@@ -37,17 +41,20 @@ class _OrderFiltersState extends State<OrderFilters> {
     category = r?.category ?? 'Ведущий';
     format = r?.format ?? 'свадьба';
     language = r?.language ?? 'Любой';
-    date = r?.date ?? DateTime(2026, 10, 10);
+    date =
+        r?.date ??
+        (widget.datePolicy.isLive
+            ? widget.datePolicy.firstDate
+            : DateTime(2026, 10, 10));
+    if (!widget.datePolicy.contains(date)) date = widget.datePolicy.firstDate;
     budget = TextEditingController(text: '${r?.budget ?? 1000000}');
     hours = TextEditingController(text: r?.hours?.toString() ?? '');
-    preferences = TextEditingController(text: r?.preferences ?? '');
   }
 
   @override
   void dispose() {
     budget.dispose();
     hours.dispose();
-    preferences.dispose();
     super.dispose();
   }
 
@@ -71,7 +78,7 @@ class _OrderFiltersState extends State<OrderFilters> {
           ? null
           : double.parse(hours.text.trim().replaceAll(',', '.')),
       language: language == 'Любой' ? null : language,
-      preferences: preferences.text.trim(),
+      preferences: widget.initial?.preferences ?? '',
     );
     if (widget.onApply != null) {
       widget.onApply!(request);
@@ -108,9 +115,13 @@ class _OrderFiltersState extends State<OrderFilters> {
           ),
         )
         .toList(),
-    onChanged: (value) {
-      if (value != null) setState(() => update(value));
-    },
+    onChanged:
+        widget.lockEventDetails &&
+            (label == 'Город' || label == 'Формат события')
+        ? null
+        : (value) {
+            if (value != null) setState(() => update(value));
+          },
   );
 
   Widget fields() => LayoutBuilder(
@@ -163,15 +174,17 @@ class _OrderFiltersState extends State<OrderFilters> {
           ),
           icon: const Icon(Icons.calendar_today_outlined, size: 20),
           label: Text('Дата: ${date.day}.${date.month}.${date.year}'),
-          onPressed: () async {
-            final value = await showDatePicker(
-              context: context,
-              initialDate: date,
-              firstDate: DateTime(2026, 9, 23),
-              lastDate: DateTime(2026, 12, 31),
-            );
-            if (value != null && mounted) setState(() => date = value);
-          },
+          onPressed: widget.lockEventDetails
+              ? null
+              : () async {
+                  final value = await showDatePicker(
+                    context: context,
+                    initialDate: date,
+                    firstDate: widget.datePolicy.firstDate,
+                    lastDate: widget.datePolicy.lastDate,
+                  );
+                  if (value != null && mounted) setState(() => date = value);
+                },
         ),
         TextFormField(
           key: const Key('budget-input'),
@@ -182,9 +195,14 @@ class _OrderFiltersState extends State<OrderFilters> {
             helperText: 'На одного подрядчика',
             errorMaxLines: 3,
           ),
-          validator: (v) => (int.tryParse(v?.trim() ?? '') ?? 0) > 0
-              ? null
-              : 'Введите целое число больше нуля',
+          validator: (v) {
+            final value = int.tryParse(v?.trim() ?? '') ?? 0;
+            if (value <= 0) return 'Введите целое число больше нуля';
+            if (widget.datePolicy.isLive && value > 1000000000) {
+              return 'Максимальный бюджет — 1 000 000 000 ₸';
+            }
+            return null;
+          },
         ),
         select(
           'Язык',
@@ -205,6 +223,9 @@ class _OrderFiltersState extends State<OrderFilters> {
           validator: (v) {
             if (v == null || v.trim().isEmpty) return null;
             final n = double.tryParse(v.trim().replaceAll(',', '.'));
+            if (widget.datePolicy.isLive && n != null && n > 48) {
+              return 'Максимальная длительность — 48 часов';
+            }
             return n != null && n.isFinite && n > 0
                 ? null
                 : 'Введите число больше нуля';
@@ -229,33 +250,13 @@ class _OrderFiltersState extends State<OrderFilters> {
             children: [
               for (final field in controls)
                 SizedBox(width: width, child: field),
-              SizedBox(
-                width: columns == 3 ? width * 2 + 20 : width,
-                child: TextFormField(
-                  key: const Key('preferences-input'),
-                  controller: preferences,
-                  minLines: 2,
-                  maxLines: 5,
-                  maxLength: 1000,
-                  decoration: const InputDecoration(
-                    labelText: 'Что для вас важно?',
-                    alignLabelWithHint: true,
-                    hintText: 'Камерное событие, спокойное ведение…',
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            widget.supportsPreferences
-                ? 'Пожелания сопоставляются со словами описания; это не проверка всех смысловых требований.'
-                : 'Текстовые пожелания пока не учитываются в подборе.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Доступны даты с 23 сентября по 31 декабря 2026 года.',
+            widget.datePolicy.isLive
+                ? 'Даты на ближайшие 365 дней. Доступность не означает бронирование.'
+                : 'Доступны даты с 23 сентября по 31 декабря 2026 года.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

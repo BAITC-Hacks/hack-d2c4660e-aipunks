@@ -3,6 +3,9 @@ import OpenAI from 'openai';
 import { openDatabase, importCatalog, readCatalog } from './database.mjs';
 import { MatchingWorker } from './worker.mjs';
 import { createExplainer, modelDefault, catalogFacts } from './explanations.mjs';
+import {createAssistant} from './assistant/runtime.mjs';
+import {createWorkspace, WorkspaceError} from './workspace.mjs';
+import {AssistantError} from './assistant/validation.mjs';
 
 const host = process.env.HOST || '127.0.0.1';
 const token = process.env.LOCAL_API_TOKEN || '';
@@ -17,29 +20,41 @@ const client = process.env.OPENAI_API_KEY ? new OpenAI({apiKey:process.env.OPENA
 const maxCalls = Number(process.env.MAX_AI_CALLS_PER_DAY || 100);
 if (!Number.isSafeInteger(maxCalls) || maxCalls < 0) throw Error('Invalid MAX_AI_CALLS_PER_DAY');
 const explain = createExplainer({db,client,model:process.env.OPENAI_MODEL || modelDefault,maxCalls});
+const assistant=createAssistant({db,catalog,version:imported.version,apiKey:process.env.OPENAI_API_KEY,
+  model:process.env.OPENAI_MODEL || modelDefault,maxCalls});
+const workspace=createWorkspace(db);
 let active = 0;
 let windowStart = Date.now(), requests = 0;
+let authRequests=0, aiRequests=0;
 const server = createServer(async (req,res) => {
   const send = (status,body) => { res.writeHead(status,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}); res.end(JSON.stringify(body)); };
   const origin = req.headers.origin;
   const localDevOrigin = !process.env.ALLOWED_ORIGINS && ['127.0.0.1','localhost','::1'].includes(host) && /^http:\/\/(localhost|127\.0\.0\.1):\d{1,5}$/.test(origin || '');
   if (origin && !origins.has(origin) && !localDevOrigin) return send(403,{error:'origin-not-allowed'});
   if (origin) {res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
-  res.setHeader('Access-Control-Allow-Headers','Content-Type, X-Local-Token');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type, X-Local-Token, Authorization');
   res.setHeader('Access-Control-Allow-Methods','GET, POST, OPTIONS');
   if (req.method === 'OPTIONS') return send(204,null);
   if (token && req.headers['x-local-token'] !== token) return send(401,{error:'unauthorized'});
   if (req.url === '/health' && req.method === 'GET') return send(200,{ok:true,ai_configured:!!client,catalog_version:imported.version,profiles:catalog.length});
   if (req.url === '/v1/catalog' && req.method === 'GET') return send(200,{catalog_version:imported.version,profiles:catalog});
-  if (!['/v1/explanations','/v1/summaries'].includes(req.url) || req.method !== 'POST') return send(404,{error:'not-found'});
-  if (Date.now()-windowStart > 60000) {windowStart=Date.now();requests=0;}
-  if (++requests > 30 || active >= 3) return send(429,{error:'rate-limit'});
+  if (!['/v1/explanations','/v1/summaries','/v1/assistant','/v1/auth','/v1/workspace','/v1/messages'].includes(req.url) || req.method !== 'POST') return send(404,{error:'not-found'});
+  if (Date.now()-windowStart > 60000) {windowStart=Date.now();requests=0;authRequests=0;aiRequests=0;}
+  if (++requests > 240 || active >= 6) return send(429,{error:'rate-limit'});
+  if (req.url==='/v1/auth' && ++authRequests>20) return send(429,{error:'rate-limit'});
+  if (['/v1/assistant','/v1/explanations','/v1/summaries'].includes(req.url) && ++aiRequests>30) return send(429,{error:'rate-limit'});
   if (!(req.headers['content-type']||'').startsWith('application/json')) return send(415,{error:'json-required'});
   active++;
   try {
     const chunks=[]; let bytes=0;
-    for await (const chunk of req) { bytes+=chunk.length; if(bytes>16384) { send(413,{error:'body-too-large'});req.destroy();return; } chunks.push(chunk); }
+    for await (const chunk of req) { bytes+=chunk.length; if(bytes>131072) { send(413,{error:'body-too-large'});req.destroy();return; } chunks.push(chunk); }
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    if (!body || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'invalid-body'});
+    const sessionToken=(req.headers.authorization||'').replace(/^Bearer /,'');
+    if (req.url==='/v1/auth') return send(200,{data:await workspace.auth(body,sessionToken)});
+    if (req.url==='/v1/workspace') return send(200,{data:workspace.rpc(body,sessionToken)});
+    if (req.url==='/v1/messages') return send(200,{data:workspace.messaging(body,sessionToken)});
+    if (req.url==='/v1/assistant') return send(200,await assistant.turn(body));
     if (req.url === '/v1/summaries') {
       if (body.catalog_version !== imported.version) return send(409,{error:'version-mismatch'});
       if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length>3 || new Set(body.ids).size!==body.ids.length) return send(400,{error:'invalid-ids'});
@@ -54,7 +69,11 @@ const server = createServer(async (req,res) => {
     const result = await worker.match(catalog,q);
     if (result.catalog_version !== imported.version || JSON.stringify(body.ids)!==JSON.stringify(result.cards.map(c=>c.id))) return send(409,{error:'selection-mismatch'});
     return send(200,{...await explain(result),catalog_version:result.catalog_version,algorithm_version:result.algorithm_version});
-  } catch { return send(400,{error:'invalid-or-unavailable-request'}); }
+  } catch(error) {
+    if(error instanceof WorkspaceError) return send(error.status,{error:error.message,...error.details});
+    if(error instanceof AssistantError) return send(error.code==='resource-exhausted'?429:error.code==='invalid-argument'?400:503,{error:error.message});
+    return send(400,{error:'invalid-or-unavailable-request'});
+  }
   finally { active--; }
 });
 server.requestTimeout=10000;

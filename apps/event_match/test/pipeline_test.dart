@@ -40,7 +40,10 @@ void main() {
     final e = engine.evaluate([
       c,
     ], request().copyWith(hours: 4, language: 'казахский')).single;
-    expect(e.violations, Violation.values.toSet());
+    expect(
+      e.violations,
+      Violation.values.where((v) => v != Violation.unconfirmed).toSet(),
+    );
     expect(e.primary, Violation.format);
   });
   test(

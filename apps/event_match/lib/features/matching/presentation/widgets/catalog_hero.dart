@@ -172,8 +172,22 @@ class CatalogHero extends StatelessWidget {
                             ),
                             child: Image.asset(
                               'assets/images/event-table.jpg',
+                              key: const Key('catalog-hero-photo'),
                               fit: BoxFit.cover,
                               alignment: const Alignment(0, .72),
+                              // Keep the reserved photo area intact if a stale
+                              // dev bundle or failed load cannot supply it.
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const ColoredBox(
+                                    color: AppColors.sage,
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.celebration_outlined,
+                                        size: 64,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
                             ),
                           ),
                         ),

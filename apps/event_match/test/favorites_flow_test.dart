@@ -180,6 +180,7 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(folderTile);
         await tester.pumpAndSettle();
+        await capture(tester, key, 'favorite-folder-content-$suffix');
         final restore = find.byKey(
           ValueKey('restore-search-${card.contractor.id}'),
         );

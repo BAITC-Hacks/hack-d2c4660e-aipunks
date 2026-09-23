@@ -3,6 +3,7 @@ import '../../domain/models.dart';
 import '../../../../app/design_tokens.dart';
 import 'ai_explanation.dart';
 import 'contractor_details.dart';
+import '../../../../app/communication_scope.dart';
 
 String money(int value) => value.toString().replaceAllMapped(
   RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
@@ -38,7 +39,8 @@ class ContractorCard extends StatelessWidget {
     this.favoriteTooltip,
     this.aiSummary,
     this.summaryPending = false,
-    this.stretchHeight = false,
+    this.footer,
+    this.favoriteBusy = false,
   });
   final Contractor contractor;
   final String? explanation;
@@ -49,7 +51,8 @@ class ContractorCard extends StatelessWidget {
   final String? favoriteTooltip;
   final String? aiSummary;
   final bool summaryPending;
-  final bool stretchHeight;
+  final Widget? footer;
+  final bool favoriteBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -66,100 +69,118 @@ class ContractorCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _CategoryHeader(
-            contractor: c,
-            rank: rank,
-            trailing: onFavorite != null || isFavorite
-                ? IconButton(
-                    key: ValueKey('favorite-${c.id}'),
-                    tooltip:
-                        favoriteTooltip ??
-                        (isFavorite
-                            ? 'Сохранено в избранном'
-                            : 'Сохранить в избранное'),
-                    isSelected: isFavorite,
-                    onPressed: onFavorite,
-                    style: IconButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                      backgroundColor: colors.surface,
-                      foregroundColor: colors.primary,
+          // Keep the content together and anchor the footer at the bottom.
+          // With no flex children the card can first measure its natural height.
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _CategoryHeader(
+                contractor: c,
+                rank: rank,
+                trailing: onFavorite != null || isFavorite
+                    ? IconButton(
+                        key: ValueKey('favorite-${c.id}'),
+                        tooltip:
+                            favoriteTooltip ??
+                            (isFavorite
+                                ? 'Сохранено в избранном'
+                                : 'Сохранить в избранное'),
+                        isSelected: isFavorite,
+                        onPressed: favoriteBusy ? null : onFavorite,
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                          backgroundColor: colors.surface,
+                          foregroundColor: colors.primary,
+                        ),
+                        icon: favoriteBusy
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.favorite_border),
+                        selectedIcon: const Icon(Icons.favorite),
+                      )
+                    : null,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -.6,
+                      ),
                     ),
-                    icon: const Icon(Icons.favorite_border),
-                    selectedIcon: const Icon(Icons.favorite),
-                  )
-                : null,
+                    const SizedBox(height: 16),
+                    Text(
+                      'от ${money(c.price)} ₸',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'за мероприятие · цена предварительная',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Языки: ${c.languages.join(', ')}'),
+                    const SizedBox(height: 8),
+                    Text(
+                      c.maxHours == null
+                          ? 'Без привязки к часам присутствия'
+                          : 'Продолжительность: до ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Форматы: ${c.formats.join(', ')}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 16),
+                    if (explanation != null || aiSummary != null)
+                      AiExplanation(
+                        text: explanation ?? aiSummary!,
+                        generated:
+                            recommendation?.source == 'llm' ||
+                            (recommendation == null && aiSummary != null),
+                      )
+                    else
+                      Text(
+                        c.description,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    if (summaryPending && aiSummary == null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Готовим краткое объяснение…',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  c.name,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -.6,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'от ${money(c.price)} ₸',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  'за мероприятие · цена предварительная',
-                  style: theme.textTheme.bodySmall,
-                ),
-                const SizedBox(height: 16),
-                Text('Языки: ${c.languages.join(', ')}'),
-                const SizedBox(height: 8),
-                Text(
-                  c.maxHours == null
-                      ? 'Без привязки к часам присутствия'
-                      : 'Продолжительность: до ${c.maxHours!.toString().replaceFirst(RegExp(r'\.0$'), '')} ч',
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Форматы: ${c.formats.join(', ')}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 16),
-                if (explanation != null || aiSummary != null)
-                  AiExplanation(
-                    text: explanation ?? aiSummary!,
-                    generated:
-                        recommendation?.source == 'llm' ||
-                        (recommendation == null && aiSummary != null),
-                  )
-                else
-                  Text(
-                    c.description,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                if (summaryPending && aiSummary == null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Готовим краткое объяснение…',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (stretchHeight) const Spacer(),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  c.synthetic
+                  c.isLive
+                      ? 'Опубликованный профиль'
+                      : c.synthetic
                       ? 'Демонстрационный профиль'
                       : 'Анонимизированный профиль',
                   style: theme.textTheme.labelMedium,
@@ -179,6 +200,26 @@ class ContractorCard extends StatelessWidget {
                   icon: const Icon(Icons.arrow_outward, size: 18),
                   label: const Text('Посмотреть профиль'),
                 ),
+                const SizedBox(height: 8),
+                Tooltip(
+                  message: c.isLive
+                      ? 'Связаться внутри Event Match'
+                      : 'У демонстрационной анкеты нет аккаунта для переписки',
+                  child: FilledButton.tonalIcon(
+                    key: ValueKey('message-${c.id}'),
+                    onPressed:
+                        c.isLive && CommunicationScope.maybeOf(context) != null
+                        ? () => CommunicationScope.maybeOf(
+                            context,
+                          )!.openMessages(context, c)
+                        : null,
+                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                    label: Text(
+                      c.isLive ? 'Написать' : 'Сообщения недоступны · демо',
+                    ),
+                  ),
+                ),
+                if (footer != null) ...[const SizedBox(height: 8), footer!],
               ],
             ),
           ),

@@ -8,10 +8,14 @@ import '../domain/alternative_dates.dart';
 enum SearchStatus { idle, searching, success, failure }
 
 class MatchingController extends ChangeNotifier {
-  MatchingController(this.repository, {RecommendationService? service})
-    : service = service ?? LocalRecommendationService(repository);
+  MatchingController(
+    this.repository, {
+    RecommendationService? service,
+    this.datePolicy = const MatchDatePolicy.demo(),
+  }) : service = service ?? LocalRecommendationService(repository);
   final CatalogRepository repository;
   final RecommendationService service;
+  final MatchDatePolicy datePolicy;
   List<Contractor> catalog = [];
   MatchResult? result;
   MatchRequest? lastRequest;
@@ -47,8 +51,10 @@ class MatchingController extends ChangeNotifier {
     dateOptions = const [];
     notifyListeners();
     try {
-      request.validate();
-      dateOptions = alternativeDates(catalog, request);
+      request.validate(datePolicy: datePolicy);
+      dateOptions = datePolicy.isLive
+          ? const []
+          : alternativeDates(catalog, request);
       notifyListeners();
       final response = await service
           .recommend(request)

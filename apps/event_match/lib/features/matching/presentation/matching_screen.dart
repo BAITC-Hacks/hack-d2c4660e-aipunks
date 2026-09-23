@@ -13,6 +13,7 @@ import 'favorites_controller.dart';
 import 'favorites_page.dart';
 import 'widgets/favorite_folder_picker.dart';
 import 'widgets/alternative_dates_strip.dart';
+import '../../../app/communication_scope.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({
@@ -20,10 +21,15 @@ class MatchingScreen extends StatefulWidget {
     required this.repository,
     this.service,
     this.favoritesRepository,
+    this.onOpenAssistant,
+    this.onOpenAccount,
+    this.onOpenLiveCatalog,
   });
   final CatalogRepository repository;
   final RecommendationService? service;
   final FavoritesRepository? favoritesRepository;
+  final ValueChanged<MatchRequest?>? onOpenAssistant;
+  final VoidCallback? onOpenAccount, onOpenLiveCatalog;
   @override
   State<MatchingScreen> createState() => _MatchingScreenState();
 }
@@ -151,15 +157,11 @@ class _MatchingScreenState extends State<MatchingScreen> {
 
   Future<void> openFavorites() async {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    final request = await Navigator.push<MatchRequest>(
+    final request = await showFavoritesPanel(
       context,
-      MaterialPageRoute(
-        builder: (_) => FavoritesPage(
-          controller: favorites,
-          catalog: controller.catalog,
-          catalogAvailable: !controller.loading && controller.error == null,
-        ),
-      ),
+      controller: favorites,
+      catalog: controller.catalog,
+      catalogAvailable: !controller.loading && controller.error == null,
     );
     if (request != null && mounted) {
       if (pageScroll.hasClients) pageScroll.jumpTo(0);
@@ -189,7 +191,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
         final size = MediaQuery.sizeOf(dialogContext);
         final content = OrderFilters(
           catalog: controller.catalog,
-          supportsPreferences: controller.service.supportsPreferences,
           initial: controller.lastRequest,
         );
         if (size.width < 700) return Dialog.fullscreen(child: content);
@@ -242,7 +243,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
         contractor: profiles[i],
         isFavorite: favorites.contains(profiles[i].id),
         onFavorite: () => saveFavorite(profiles[i]),
-        stretchHeight: columns > 1,
         explanation: recommendations?[i].explanation,
         rank: recommendations == null ? null : i + 1,
         recommendation: recommendations?[i],
@@ -255,7 +255,9 @@ class _MatchingScreenState extends State<MatchingScreen> {
             !summaryFailed &&
             !summaries.containsKey(profiles[i].id),
       );
-      // Measure only each paginated row; no hard-coded height or text clipping.
+      // Table measures actual child layouts before stretching the row. Unlike
+      // IntrinsicHeight, it does not rely on text's estimated intrinsic height,
+      // which can be a pixel shorter than the final browser layout.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -266,20 +268,29 @@ class _MatchingScreenState extends State<MatchingScreen> {
               ),
               child: columns == 1
                   ? card(start)
-                  : IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (var offset = 0; offset < columns; offset++) ...[
-                            if (offset > 0) const SizedBox(width: 20),
-                            Expanded(
-                              child: start + offset < profiles.length
+                  : Table(
+                      defaultVerticalAlignment:
+                          TableCellVerticalAlignment.intrinsicHeight,
+                      columnWidths: {
+                        for (var offset = 1; offset < columns; offset++)
+                          offset * 2 - 1: const FixedColumnWidth(20),
+                      },
+                      children: [
+                        TableRow(
+                          children: [
+                            for (
+                              var offset = 0;
+                              offset < columns;
+                              offset++
+                            ) ...[
+                              if (offset > 0) const SizedBox.shrink(),
+                              start + offset < profiles.length
                                   ? card(start + offset)
                                   : const SizedBox.shrink(),
-                            ),
+                            ],
                           ],
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
             ),
         ],
@@ -753,7 +764,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
             OrderFilters(
               key: ValueKey(controller.lastRequest),
               catalog: controller.catalog,
-              supportsPreferences: controller.service.supportsPreferences,
               initial: controller.lastRequest,
               embedded: true,
               onCancel: () => setState(() => filtersExpanded = false),
@@ -842,7 +852,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         onPressed: showHelp,
                         child: const Text('Как это работает'),
                       ),
-                      const SizedBox(width: 32),
+                      const SizedBox(width: 12),
                       const Icon(
                         Icons.place_outlined,
                         size: 17,
@@ -860,6 +870,66 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         tooltip: 'Как это работает',
                         icon: const Icon(Icons.help_outline, size: 22),
                       ),
+                    if (!mobile)
+                      IconButton(
+                        key: const Key('open-assistant'),
+                        tooltip: 'ИИ-помощник',
+                        onPressed: () => widget.onOpenAssistant?.call(
+                          controller.lastRequest,
+                        ),
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                      ),
+                    if (widget.onOpenAccount != null) ...[
+                      if (!mobile)
+                        IconButton(
+                          key: const Key('open-messages'),
+                          tooltip: 'Сообщения',
+                          onPressed: () => CommunicationScope.maybeOf(
+                            context,
+                          )?.openMessages(context, null),
+                          icon: const Icon(Icons.chat_bubble_outline),
+                        ),
+                      PopupMenuButton<String>(
+                        tooltip: 'Кабинеты и живой каталог',
+                        icon: const Icon(Icons.person_outline),
+                        onSelected: (v) {
+                          switch (v) {
+                            case 'catalog':
+                              widget.onOpenLiveCatalog?.call();
+                            case 'assistant':
+                              widget.onOpenAssistant?.call(
+                                controller.lastRequest,
+                              );
+                            case 'messages':
+                              CommunicationScope.maybeOf(
+                                context,
+                              )?.openMessages(context, null);
+                            default:
+                              widget.onOpenAccount?.call();
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'account',
+                            child: Text('Мой кабинет'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'catalog',
+                            child: Text('Опубликованные подрядчики'),
+                          ),
+                          if (mobile)
+                            const PopupMenuItem(
+                              value: 'assistant',
+                              child: Text('ИИ-помощник'),
+                            ),
+                          if (mobile)
+                            const PopupMenuItem(
+                              value: 'messages',
+                              child: Text('Сообщения'),
+                            ),
+                        ],
+                      ),
+                    ],
                     IconButton(
                       key: Key(
                         desktop

@@ -3,6 +3,29 @@ import 'normalization.dart';
 String dateKey(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+/// Event calendars use Kazakhstan time, independently of the device timezone.
+DateTime eventToday([DateTime? now]) {
+  final local = (now ?? DateTime.now()).toUtc().add(const Duration(hours: 5));
+  return DateTime(local.year, local.month, local.day);
+}
+
+class MatchDatePolicy {
+  const MatchDatePolicy.demo() : start = null;
+  MatchDatePolicy.live([DateTime? now]) : start = eventToday(now);
+  final DateTime? start;
+  bool get isLive => start != null;
+  DateTime get firstDate => start ?? DateTime(2026, 9, 23);
+  DateTime get lastDate => start == null
+      ? DateTime(2026, 12, 31)
+      : DateTime(start!.year, start!.month, start!.day + 365);
+  bool contains(DateTime value) {
+    final day = DateTime(value.year, value.month, value.day);
+    return !day.isBefore(firstDate) && !day.isAfter(lastDate);
+  }
+}
+
+enum AvailabilityStatus { available, busy, unconfirmed }
+
 class Contractor {
   const Contractor({
     required this.id,
@@ -18,12 +41,18 @@ class Contractor {
     this.synthetic = false,
     this.cityImputed = false,
     this.priceImputed = false,
+    this.isLive = false,
+    this.contact = '',
+    this.portfolioUrls = const [],
   });
   final String id, name, city, description;
   final List<String> categories, formats, languages, busyDates;
   final int price;
   final double? maxHours;
   final bool synthetic, cityImputed, priceImputed;
+  final bool isLive;
+  final String contact;
+  final List<String> portfolioUrls;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -41,6 +70,10 @@ class Contractor {
     'synthetic': synthetic,
     'city_imputed': cityImputed,
     'price_imputed': priceImputed,
+    // Keep the canonical demo snapshot (and its cache hash) unchanged.
+    if (isLive) 'is_live': true,
+    if (contact.isNotEmpty) 'contact': contact,
+    if (portfolioUrls.isNotEmpty) 'portfolio_urls': portfolioUrls,
   };
 
   factory Contractor.fromJson(Map<String, dynamic> j) => Contractor(
@@ -57,6 +90,9 @@ class Contractor {
     synthetic: j['synthetic'] as bool? ?? false,
     cityImputed: j['city_imputed'] as bool? ?? false,
     priceImputed: j['price_imputed'] as bool? ?? false,
+    isLive: j['is_live'] as bool? ?? false,
+    contact: j['contact'] as String? ?? '',
+    portfolioUrls: List<String>.from(j['portfolio_urls'] as List? ?? const []),
   );
 }
 
@@ -117,7 +153,18 @@ class MatchRequest {
     'preferences': preferences.trim(),
   };
 
-  void validate() {
+  factory MatchRequest.fromJson(Map<String, dynamic> j) => MatchRequest(
+    city: j['city'] as String,
+    date: DateTime.parse(j['date'] as String),
+    format: j['event_format'] as String,
+    category: j['category'] as String,
+    budget: (j['budget_kzt'] as num).toInt(),
+    hours: (j['hours'] as num?)?.toDouble(),
+    language: j['language'] as String?,
+    preferences: j['preferences'] as String? ?? '',
+  );
+
+  void validate({MatchDatePolicy datePolicy = const MatchDatePolicy.demo()}) {
     if (city.trim().isEmpty ||
         category.trim().isEmpty ||
         format.trim().isEmpty) {
@@ -127,9 +174,14 @@ class MatchRequest {
       throw ArgumentError('Budget and duration must be positive');
     }
     final calendarDate = DateTime(date.year, date.month, date.day);
-    if (calendarDate.isBefore(DateTime(2026, 9, 23)) ||
-        calendarDate.isAfter(DateTime(2026, 12, 31))) {
+    if (!datePolicy.contains(calendarDate)) {
       throw ArgumentError('Date is outside the dataset calendar');
+    }
+    if (datePolicy.isLive &&
+        (budget > 1000000000 || (hours != null && hours! > 48))) {
+      throw ArgumentError(
+        'Бюджет — до 1 000 000 000 ₸, длительность — до 48 часов',
+      );
     }
     if (preferences.trim().length > 1000) {
       throw ArgumentError('Preferences exceed 1000 characters');
@@ -169,7 +221,7 @@ class Recommendation {
   );
 }
 
-enum Violation { format, language, hours, busy, budget }
+enum Violation { format, language, hours, busy, budget, unconfirmed }
 
 class Evaluation {
   const Evaluation(this.contractor, this.violations);

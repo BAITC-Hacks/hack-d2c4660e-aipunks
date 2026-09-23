@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 import 'ai_explanation.dart';
+import 'side_panel.dart';
+import '../../../../app/communication_scope.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 Future<void> showContractorDetails(
   BuildContext context, {
@@ -8,22 +11,14 @@ Future<void> showContractorDetails(
   String? explanation,
   bool generated = false,
   Recommendation? recommendation,
-}) => showDialog<void>(
-  context: context,
+}) => showSidePanel<void>(
+  context,
   barrierLabel: 'Закрыть профиль',
-  builder: (context) => Dialog(
-    alignment: Alignment.centerRight,
-    insetPadding: const EdgeInsets.all(24),
-    child: SizedBox(
-      width: 640,
-      height: MediaQuery.sizeOf(context).height - 48,
-      child: ContractorDetails(
-        contractor: contractor,
-        explanation: explanation,
-        generated: generated,
-        recommendation: recommendation,
-      ),
-    ),
+  builder: (context) => ContractorDetails(
+    contractor: contractor,
+    explanation: explanation,
+    generated: generated,
+    recommendation: recommendation,
   ),
 );
 
@@ -152,7 +147,9 @@ class ContractorDetails extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          c.synthetic
+                          c.isLive
+                              ? 'Опубликованный профиль подрядчика'
+                              : c.synthetic
                               ? (c.id.startsWith('DEMO-')
                                     ? 'Демонстрационный профиль · добавлен нами'
                                     : 'Синтетический профиль организаторов')
@@ -163,12 +160,46 @@ class ContractorDetails extends StatelessWidget {
                         if (c.cityImputed)
                           const Text('Город заполнен при подготовке датасета'),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Доступность проверяется при подборе по дате. Бронирование и переписка пока не подключены.',
+                        Text(
+                          c.isLive
+                              ? 'Доступность проверяется по актуальному календарю. Переписка не является бронированием.'
+                              : 'Демонстрационная анкета не принадлежит зарегистрированному подрядчику. Переписка и бронирование недоступны.',
                         ),
                       ],
                     ),
                   ),
+                  if (c.isLive)
+                    section(
+                      'Контакты и портфолио',
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText(c.contact),
+                          for (final url in c.portfolioUrls)
+                            TextButton.icon(
+                              onPressed: () async {
+                                final uri = Uri.tryParse(url);
+                                if (uri != null && uri.scheme == 'https') {
+                                  await launchUrl(uri);
+                                }
+                              },
+                              icon: const Icon(Icons.open_in_new, size: 18),
+                              label: Text(url),
+                            ),
+                          const SizedBox(height: 12),
+                          FilledButton.tonalIcon(
+                            onPressed:
+                                CommunicationScope.maybeOf(context) == null
+                                ? null
+                                : () => CommunicationScope.maybeOf(
+                                    context,
+                                  )!.openMessages(context, c),
+                            icon: const Icon(Icons.chat_bubble_outline),
+                            label: const Text('Написать подрядчику'),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
