@@ -5,6 +5,10 @@ import '../features/assistant/presentation/assistant_host.dart';
 import '../features/auth/presentation/auth_pages.dart';
 import '../features/auth/presentation/session_controller.dart';
 import '../features/auth/presentation/settings_page.dart';
+import '../features/communication/data/firestore_communication_repository.dart';
+import '../features/communication/domain/communication_models.dart';
+import '../features/communication/domain/communication_repository.dart';
+import '../features/communication/presentation/communication_page.dart';
 import '../features/matching/data/catalog_repository.dart';
 import '../features/matching/presentation/matching_screen.dart';
 import '../features/matching/domain/recommendation_service.dart';
@@ -30,6 +34,7 @@ class EventMatchApp extends StatefulWidget {
     this.session,
     this.workspace,
     this.plans,
+    this.communications,
     this.initialLocation,
   });
   final CatalogRepository? repository;
@@ -37,6 +42,7 @@ class EventMatchApp extends StatefulWidget {
   final SessionController? session;
   final WorkspaceRepository? workspace;
   final EventPlanRepository? plans;
+  final CommunicationRepository? communications;
   final String? initialLocation;
   @override
   State<EventMatchApp> createState() => _EventMatchAppState();
@@ -45,6 +51,7 @@ class EventMatchApp extends StatefulWidget {
 class _EventMatchAppState extends State<EventMatchApp> {
   GoRouter? _router;
   EventPlanRepository? _plans;
+  CommunicationRepository? _communications;
   final CatalogRepository _demoRepository = AssetCatalogRepository();
   AssistantSession? _assistantSession;
   @override
@@ -59,6 +66,31 @@ class _EventMatchAppState extends State<EventMatchApp> {
     final session = widget.session!;
     final workspace = widget.workspace!;
     Widget settings() => SettingsPage(session: session, repository: workspace);
+    Widget communication(GoRouterState state, CommunicationMode mode) {
+      if (mode == CommunicationMode.admin && !session.isAdmin) {
+        return const Text('Очередь поддержки доступна администратору.');
+      }
+      return CommunicationPage(
+        key: ValueKey('${session.uid}:${session.epoch}:$mode:${state.uri}'),
+        repository: _communications ??=
+            widget.communications ?? FirestoreCommunicationRepository(),
+        workspace: workspace,
+        uid: session.uid!,
+        mode: mode,
+        isAdmin: session.isAdmin,
+        initialConversationId: state.uri.queryParameters['conversation'],
+        initialContractorId: state.uri.queryParameters['contractor'],
+        initialEventId: state.uri.queryParameters['event'],
+        onSelectConversation: (id) => _router!.go(
+          Uri(
+            path: state.uri.path,
+            queryParameters: {'conversation': id},
+          ).toString(),
+        ),
+        onOpenEvents: () => _router!.go('/client/events'),
+      );
+    }
+
     return GoRouter(
       initialLocation: widget.initialLocation,
       overridePlatformDefaultLocation: widget.initialLocation != null,
@@ -89,6 +121,12 @@ class _EventMatchAppState extends State<EventMatchApp> {
                     child: CatalogPage(
                       repository: workspace,
                       uid: session.canUseWorkspace ? session.uid : null,
+                      onCreateInquiry: (contractor) => context.go(
+                        Uri(
+                          path: '/client/messages',
+                          queryParameters: {'contractor': contractor.id},
+                        ).toString(),
+                      ),
                       onRequireSignIn: () => context.go(
                         Uri(
                           path: '/auth',
@@ -177,6 +215,14 @@ class _EventMatchAppState extends State<EventMatchApp> {
               path: '/client/:section',
               builder: (context, state) {
                 final section = state.pathParameters['section']!;
+                if (section == 'messages' || section == 'support') {
+                  return communication(
+                    state,
+                    section == 'support'
+                        ? CommunicationMode.support
+                        : CommunicationMode.client,
+                  );
+                }
                 if (section == 'planner') {
                   return EventPlanPage(
                     key: ValueKey(
@@ -210,6 +256,14 @@ class _EventMatchAppState extends State<EventMatchApp> {
               path: '/contractor/:section',
               builder: (context, state) {
                 final section = state.pathParameters['section']!;
+                if (section == 'messages' || section == 'support') {
+                  return communication(
+                    state,
+                    section == 'support'
+                        ? CommunicationMode.support
+                        : CommunicationMode.contractor,
+                  );
+                }
                 return section == 'settings'
                     ? settings()
                     : ContractorPage(
@@ -222,13 +276,16 @@ class _EventMatchAppState extends State<EventMatchApp> {
             ),
             GoRoute(
               path: '/admin/:section',
-              builder: (context, state) => AdminPage(
-                key: ValueKey('admin:${state.pathParameters['section']}'),
-                repository: workspace,
-                uid: session.uid!,
-                isAdmin: session.isAdmin,
-                section: state.pathParameters['section']!,
-              ),
+              builder: (context, state) =>
+                  state.pathParameters['section'] == 'support'
+                  ? communication(state, CommunicationMode.admin)
+                  : AdminPage(
+                      key: ValueKey('admin:${state.pathParameters['section']}'),
+                      repository: workspace,
+                      uid: session.uid!,
+                      isAdmin: session.isAdmin,
+                      section: state.pathParameters['section']!,
+                    ),
             ),
           ],
         ),

@@ -21,10 +21,12 @@ class CatalogPage extends StatefulWidget {
     required this.repository,
     required this.onRequireSignIn,
     this.uid,
+    this.onCreateInquiry,
   });
   final WorkspaceRepository repository;
   final String? uid;
   final VoidCallback onRequireSignIn;
+  final ValueChanged<Contractor>? onCreateInquiry;
   @override
   State<CatalogPage> createState() => _CatalogPageState();
 }
@@ -221,15 +223,30 @@ class _CatalogPageState extends State<CatalogPage> {
                 contractor: items[i],
                 explanation: recommendations?[i].explanation,
                 rank: recommendations == null ? null : i + 1,
-                footer: WorkspaceAction(
-                  label: favorites.contains(items[i].id)
-                      ? 'Убрать из избранного'
-                      : 'В избранное',
-                  icon: favorites.contains(items[i].id)
-                      ? Icons.favorite
-                      : Icons.favorite_border,
-                  outlined: true,
-                  onPressed: () => _favorite(items[i]),
+                footer: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (widget.onCreateInquiry != null &&
+                        items[i].isLive &&
+                        items[i].id != widget.uid) ...[
+                      FilledButton.icon(
+                        onPressed: () => widget.onCreateInquiry!(items[i]),
+                        icon: const Icon(Icons.chat_bubble_outline),
+                        label: const Text('Обсудить мероприятие'),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    WorkspaceAction(
+                      label: favorites.contains(items[i].id)
+                          ? 'Убрать из избранного'
+                          : 'В избранное',
+                      icon: favorites.contains(items[i].id)
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      outlined: true,
+                      onPressed: () => _favorite(items[i]),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -275,6 +275,213 @@ service cloud.firestore {
         && shape(request.resource.data);
     }
 
+
+    // Conversations use immutable identities and transactional message summaries.
+    function conversationPath(id) { return /databases/$(database)/documents/conversations/$(id); }
+    function messagePath(id, messageId) { return /databases/$(database)/documents/conversations/$(id)/messages/$(messageId); }
+    function communicationAuditPath(id, revision) { return /databases/$(database)/documents/communicationAudit/$(id + '_' + string(revision)); }
+    function safeId(id) { return id is string && id.matches('[^/]{1,160}') && !(id in ['.', '..']); }
+    function presentText(value, maximum) { return text(value, maximum) && value.size() > 0 && value.matches('[\\s\\S]*\\S[\\s\\S]*'); }
+    function communicationReader() {
+      return active() && !exists(/databases/$(database)/documents/deletedAccounts/$(request.auth.uid));
+    }
+    function liveParticipant(uid) {
+      return getAfter(accountPath(uid)).data.status == 'active'
+        && !exists(/databases/$(database)/documents/deletedAccounts/$(uid));
+    }
+    function inquiryMember(c) { return c.kind == 'inquiry' && request.auth.uid in c.participantIds; }
+    function contextReader(c, id) {
+      let ticket = get(conversationPath(c.contextTicketId)).data;
+      return c.kind == 'inquiry' && c.contextTicketId != '' && admin()
+        && ticket.kind == 'support' && ticket.status == 'in_progress'
+        && ticket.assignedAdminId == request.auth.uid && ticket.linkedInquiryId == id;
+    }
+    function conversationReader(c, id) {
+      return communicationReader() && (request.auth.uid in c.participantIds
+        || (c.kind == 'support' && admin()) || contextReader(c, id));
+    }
+    function supportContextAvailable(c) {
+      return c.linkedInquiryId == ''
+        || (!exists(/databases/$(database)/documents/deletedAccounts/$(get(conversationPath(c.linkedInquiryId)).data.clientId))
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(get(conversationPath(c.linkedInquiryId)).data.contractorId)));
+    }
+    function supportAvailable(c) {
+      return supportContextAvailable(c)
+        && (c.assignedAdminId == '' || !exists(/databases/$(database)/documents/deletedAccounts/$(c.assignedAdminId)));
+    }
+    function retainedConversation(c) {
+      return !exists(/databases/$(database)/documents/deletedAccounts/$(c.clientId))
+        && ((c.kind == 'inquiry' && !exists(/databases/$(database)/documents/deletedAccounts/$(c.contractorId)))
+          || (c.kind == 'support' && supportAvailable(c)));
+    }
+    function conversationSender(c) {
+      return communicationReader() && liveParticipant(c.clientId)
+        && ((c.kind == 'inquiry' && inquiryMember(c) && liveParticipant(c.contractorId)
+              && c.status in ['sent', 'discussing'])
+          || (c.kind == 'support' && c.status in ['open', 'in_progress'] && supportAvailable(c)
+              && (c.clientId == request.auth.uid || (c.assignedAdminId == request.auth.uid && admin()))));
+    }
+    function communicationAudited(id, revision, action) {
+      let p = communicationAuditPath(id, revision);
+      let a = getAfter(p).data;
+      return !exists(p) && a.conversationId == id && a.actorId == request.auth.uid
+        && a.revision == revision && a.action == action && a.createdAt == request.time;
+    }
+    function nextMessage(id, c) {
+      let p = messagePath(id, c.lastMessageId);
+      let m = getAfter(p).data;
+      return safeId(c.lastMessageId) && !exists(p) && m.senderId == request.auth.uid
+        && m.sequence == c.messageCount && m.createdAt == request.time
+        && c.lastSenderId == request.auth.uid && c.lastMessageAt == request.time;
+    }
+    match /conversations/{id} {
+      function shape(c) {
+        return safeId(id) && c.keys().hasOnly(['kind', 'participantIds', 'clientId', 'contractorId', 'clientName', 'contractorName',
+            'eventId', 'eventSnapshot', 'subject', 'status', 'linkedInquiryId', 'assignedAdminId', 'contextTicketId',
+            'createdAt', 'updatedAt', 'lastMessageAt', 'lastMessageId', 'lastSenderId', 'messageCount', 'revision'])
+          && c.kind in ['inquiry', 'support'] && c.participantIds is list && safeId(c.clientId)
+          && text(c.clientName, 120) && text(c.contractorName, 120) && presentText(c.subject, 120)
+          && c.eventSnapshot is map && c.messageCount is int && c.messageCount > 0
+          && c.revision is int && c.revision > 0 && c.updatedAt == request.time;
+      }
+      function eventSnapshotMatches(c) {
+        let event = get(/databases/$(database)/documents/accounts/$(c.clientId)/events/$(c.eventId)).data;
+        return c.eventSnapshot.keys().hasOnly(['name', 'city', 'date', 'format', 'preferences'])
+          && c.eventSnapshot.name == event.name && c.eventSnapshot.city == event.city
+          && c.eventSnapshot.date == event.date && c.eventSnapshot.format == event.format
+          && c.eventSnapshot.preferences == event.preferences;
+      }
+      function inquiryCreate(c) {
+        let published = get(publicationPath(c.contractorId)).data;
+        return c.kind == 'inquiry' && safeId(c.contractorId) && safeId(c.eventId)
+          && c.contractorId != request.auth.uid && liveParticipant(c.contractorId)
+          && published.published == true && published.ownerId == c.contractorId
+          && c.contractorName == published.content.name && c.subject in published.content.categories
+          && c.participantIds == [request.auth.uid, c.contractorId] && c.status == 'sent'
+          && c.linkedInquiryId == '' && c.assignedAdminId == '' && c.contextTicketId == ''
+          && eventSnapshotMatches(c);
+      }
+      function linkedContext(c) {
+        let before = get(conversationPath(c.linkedInquiryId)).data;
+        let after = getAfter(conversationPath(c.linkedInquiryId)).data;
+        return safeId(c.linkedInquiryId) && inquiryMember(before)
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(before.clientId))
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(before.contractorId))
+          && after.contextTicketId == id && after.revision == before.revision + 1 && after.updatedAt == request.time;
+      }
+      function supportCreate(c) {
+        return c.kind == 'support' && c.participantIds == [request.auth.uid]
+          && c.contractorId == '' && c.contractorName == '' && c.eventId == '' && c.eventSnapshot == {}
+          && c.status == 'open' && c.assignedAdminId == '' && c.contextTicketId == ''
+          && (c.linkedInquiryId == '' || linkedContext(c))
+          && communicationAudited(id, 1, 'opened');
+      }
+      function messageUpdate(before, after) {
+        return after.diff(before).affectedKeys().hasOnly(['updatedAt', 'revision', 'messageCount', 'lastMessageId', 'lastMessageAt', 'lastSenderId'])
+          && after.messageCount == before.messageCount + 1 && conversationSender(before) && nextMessage(id, after);
+      }
+      function inquiryStatus(before, after) {
+        return inquiryMember(before) && liveParticipant(before.clientId) && liveParticipant(before.contractorId)
+          && ((before.status == 'sent' && after.status == 'discussing' && request.auth.uid == before.contractorId)
+            || (before.status in ['sent', 'discussing'] && after.status == 'declined' && request.auth.uid == before.contractorId)
+            || (before.status in ['sent', 'discussing'] && after.status == 'cancelled' && request.auth.uid == before.clientId)
+            || (before.status == 'discussing' && after.status == 'closed'));
+      }
+      function supportStatus(before, after) {
+        return before.kind == 'support' && liveParticipant(before.clientId) && supportAvailable(before)
+          && ((before.status == 'open' && after.status == 'in_progress' && before.assignedAdminId == ''
+              && after.assignedAdminId == request.auth.uid && before.clientId != request.auth.uid
+              && admin() && communicationAudited(id, after.revision, 'claimed'))
+            || (before.status in ['open', 'in_progress'] && after.status == 'resolved'
+              && after.assignedAdminId == before.assignedAdminId
+              && (request.auth.uid == before.clientId || (before.status == 'in_progress' && before.assignedAdminId == request.auth.uid && admin()))
+              && communicationAudited(id, after.revision, 'resolved')));
+      }
+      function statusUpdate(before, after) {
+        return after.diff(before).affectedKeys().hasOnly(['updatedAt', 'revision', 'status', 'assignedAdminId'])
+          && ((after.assignedAdminId == before.assignedAdminId && inquiryStatus(before, after)) || supportStatus(before, after));
+      }
+      function contextUpdate(before, after) {
+        let ticketPath = conversationPath(after.contextTicketId);
+        let ticket = getAfter(ticketPath).data;
+        return after.diff(before).affectedKeys().hasOnly(['updatedAt', 'revision', 'contextTicketId'])
+          && inquiryMember(before) && safeId(after.contextTicketId) && !exists(ticketPath)
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(before.clientId))
+          && !exists(/databases/$(database)/documents/deletedAccounts/$(before.contractorId))
+          && ticket.kind == 'support' && ticket.clientId == request.auth.uid && ticket.linkedInquiryId == id
+          && ticket.status == 'open' && ticket.revision == 1 && ticket.createdAt == request.time
+          && communicationAudited(after.contextTicketId, 1, 'opened');
+      }
+      // Clients use a stable generated id and a transaction for safe retries.
+      allow get: if communicationReader() && (!exists(conversationPath(id)) || conversationReader(resource.data, id));
+      allow list: if conversationReader(resource.data, id);
+      allow create: if communicationReader() && shape(request.resource.data)
+        && request.resource.data.clientId == request.auth.uid
+        && request.resource.data.clientName == get(accountPath(request.auth.uid)).data.name
+        && request.resource.data.createdAt == request.time && request.resource.data.messageCount == 1
+        && request.resource.data.revision == 1 && nextMessage(id, request.resource.data)
+        && ((request.resource.data.kind == 'inquiry' && inquiryCreate(request.resource.data))
+          || (request.resource.data.kind == 'support' && supportCreate(request.resource.data)));
+      allow update: if communicationReader() && shape(request.resource.data)
+        && request.resource.data.revision == resource.data.revision + 1
+        && (messageUpdate(resource.data, request.resource.data) || statusUpdate(resource.data, request.resource.data)
+          || contextUpdate(resource.data, request.resource.data));
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if conversationReader(get(conversationPath(id)).data, id);
+        allow create: if safeId(messageId)
+          && request.resource.data.keys().hasOnly(['senderId', 'text', 'createdAt', 'sequence'])
+          && request.resource.data.senderId == request.auth.uid && presentText(request.resource.data.text, 4000)
+          && request.resource.data.createdAt == request.time && request.resource.data.sequence is int
+          && request.resource.data.sequence > 0
+          && conversationSender(getAfter(conversationPath(id)).data)
+          && getAfter(conversationPath(id)).data.lastMessageId == messageId
+          && getAfter(conversationPath(id)).data.lastSenderId == request.auth.uid
+          && getAfter(conversationPath(id)).data.lastMessageAt == request.time
+          && getAfter(conversationPath(id)).data.updatedAt == request.time
+          && getAfter(conversationPath(id)).data.messageCount == request.resource.data.sequence
+          && ((!exists(conversationPath(id)) && request.resource.data.sequence == 1)
+            || (getAfter(conversationPath(id)).data.revision == get(conversationPath(id)).data.revision + 1
+              && request.resource.data.sequence == get(conversationPath(id)).data.messageCount + 1));
+        allow update, delete: if false;
+      }
+      match /readStates/{uid} {
+        allow read: if request.auth.uid == uid && conversationReader(get(conversationPath(id)).data, id);
+        allow create, update: if request.auth.uid == uid && conversationReader(get(conversationPath(id)).data, id)
+          && retainedConversation(get(conversationPath(id)).data)
+          && request.resource.data.keys().hasOnly(['lastReadSequence', 'updatedAt'])
+          && request.resource.data.lastReadSequence is int && request.resource.data.lastReadSequence >= 0
+          && request.resource.data.lastReadSequence <= get(conversationPath(id)).data.messageCount
+          && request.resource.data.updatedAt == request.time
+          && (!exists(/databases/$(database)/documents/conversations/$(id)/readStates/$(uid))
+            || request.resource.data.lastReadSequence >= resource.data.lastReadSequence);
+        allow delete: if false;
+      }
+    }
+    match /communicationAudit/{auditId} {
+      function coupled(a) {
+        let p = conversationPath(a.conversationId);
+        let after = getAfter(p).data;
+        return after.kind == 'support' && after.revision == a.revision && after.updatedAt == request.time
+          && ((a.action == 'opened' && !exists(p) && a.revision == 1 && after.status == 'open' && after.clientId == request.auth.uid)
+            || (a.action == 'claimed' && get(p).data.status == 'open' && after.status == 'in_progress'
+              && after.assignedAdminId == request.auth.uid && admin() && get(p).data.revision + 1 == a.revision)
+            || (a.action == 'resolved' && get(p).data.status in ['open', 'in_progress'] && after.status == 'resolved'
+              && get(p).data.revision + 1 == a.revision
+              && (after.clientId == request.auth.uid || (after.assignedAdminId == request.auth.uid && admin()))));
+      }
+      allow read: if communicationReader() && (admin() || get(conversationPath(resource.data.conversationId)).data.clientId == request.auth.uid);
+      allow create: if communicationReader()
+        && request.resource.data.keys().hasOnly(['conversationId', 'actorId', 'action', 'revision', 'createdAt'])
+        && safeId(request.resource.data.conversationId) && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.revision is int && request.resource.data.revision > 0
+        && request.resource.data.action in ['opened', 'claimed', 'resolved'] && request.resource.data.createdAt == request.time
+        && auditId == request.resource.data.conversationId + '_' + string(request.resource.data.revision)
+        && coupled(request.resource.data);
+      allow update, delete: if false;
+    }
+
     match /audit/{id} {
       function coupled(a) {
         let kind = a.resourceType;

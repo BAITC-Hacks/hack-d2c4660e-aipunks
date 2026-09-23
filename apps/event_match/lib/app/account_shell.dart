@@ -23,6 +23,16 @@ class AccountShell extends StatelessWidget {
       switch (_mode) {
         'contractor' => [
           (
+            path: '/contractor/messages',
+            title: 'Заявки и сообщения',
+            icon: Icons.chat_bubble_outline,
+          ),
+          (
+            path: '/contractor/support',
+            title: 'Поддержка',
+            icon: Icons.support_agent_outlined,
+          ),
+          (
             path: '/contractor/overview',
             title: 'Обзор',
             icon: Icons.dashboard_outlined,
@@ -49,6 +59,12 @@ class AccountShell extends StatelessWidget {
           ),
         ],
         'admin' => [
+          if (session.isAdmin)
+            (
+              path: '/admin/support',
+              title: 'Обращения в поддержку',
+              icon: Icons.support_agent_outlined,
+            ),
           (
             path: '/admin/overview',
             title: 'Обзор',
@@ -78,6 +94,16 @@ class AccountShell extends StatelessWidget {
           (path: '/admin/audit', title: 'Журнал', icon: Icons.history_outlined),
         ],
         _ => [
+          (
+            path: '/client/messages',
+            title: 'Заявки и сообщения',
+            icon: Icons.chat_bubble_outline,
+          ),
+          (
+            path: '/client/support',
+            title: 'Поддержка',
+            icon: Icons.support_agent_outlined,
+          ),
           (
             path: '/client/events',
             title: 'Мои мероприятия',

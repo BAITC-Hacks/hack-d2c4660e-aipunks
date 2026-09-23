@@ -102,7 +102,7 @@ async function deleteAccount() {
   ]);
   console.log(JSON.stringify({ project: values.project, command, uid, execute: values.execute, resuming: lockDoc.exists,
     ownDocuments: { events: events.size, selections: selections.size, favorites: favorites.size, calendarMonths: calendars.size, eventPlans: eventPlans.size },
-    additionalCleanup: 'contractor snapshots in other accounts, profile, publication, staff role, audit identifiers, Firebase Auth',
+    additionalCleanup: 'contractor snapshots, conversations and linked support with messages/read states/audits, profile, publication, staff role, audit identifiers, Firebase Auth',
   }, null, 2));
   if (!values.execute) return;
 
@@ -135,6 +135,48 @@ async function deleteAccount() {
       });
     }
   }
+  // Purge the entire conversation, including the other participant's copies of
+  // messages and event snapshots. Linked tickets may quote private messages, so
+  // those are removed too. A retained inquiry never keeps a grant to a purged
+  // support ticket. Scan after the tombstone: rules forbid new messages from or
+  // to the deleted user while this idempotent cleanup is running.
+  const conversations = await store.collection('conversations').get();
+  const purgeIds = new Set([...((await lockRef.get()).data().communicationIds ?? []), ...conversations.docs.filter((row) => {
+    const c = row.data();
+    return c.participantIds?.includes(uid) || c.assignedAdminId === uid;
+  }).map((row) => row.id)]);
+  for (const row of conversations.docs) {
+    if (row.data().kind === 'support' && purgeIds.has(row.data().linkedInquiryId)) purgeIds.add(row.id);
+  }
+  // Persist ids before recursive deletion so an interrupted delete can also
+  // discover orphan subcollections after their parent document is gone.
+  if (purgeIds.size) await lockRef.set({ communicationIds: FieldValue.arrayUnion(...purgeIds) }, { merge: true });
+  // Delete audit rows first. If interrupted, the conversation still identifies
+  // all remaining cleanup work on retry; deletion cannot strand its audit.
+  const communicationAudits = await store.collection('communicationAudit').get();
+  for (const row of communicationAudits.docs) {
+    if (purgeIds.has(row.data().conversationId) || row.data().actorId === uid) await row.ref.delete();
+  }
+  for (const row of conversations.docs) {
+    if (!purgeIds.has(row.id) && purgeIds.has(row.data().contextTicketId)) {
+      await store.runTransaction(async (tx) => {
+        const latest = await tx.get(row.ref);
+        if (latest.exists && purgeIds.has(latest.data().contextTicketId)) {
+          tx.update(row.ref, { contextTicketId: '', revision: latest.data().revision + 1, updatedAt: FieldValue.serverTimestamp() });
+        }
+      });
+    }
+  }
+  // Linked support must be deleted before its source inquiry so retries can
+  // still discover any ticket that failed midway through recursive deletion.
+  const conversationKinds = new Map(conversations.docs.map((row) => [row.id, row.data().kind]));
+  const orderedIds = [...purgeIds].sort((a, b) => Number(conversationKinds.get(a) === 'inquiry') - Number(conversationKinds.get(b) === 'inquiry'));
+  for (const id of orderedIds) await store.recursiveDelete(store.doc(`conversations/${id}`));
+  // Administrators can have private read receipts in a retained inquiry whose
+  // support context they were allowed to inspect before deletion.
+  for (const row of conversations.docs) {
+    if (!purgeIds.has(row.id)) await row.ref.collection('readStates').doc(uid).delete();
+  }
   const targetAudit = await store.collection('audit').where('resourceId', '==', uid).get();
   for (const row of targetAudit.docs) await row.ref.delete();
   const actorAudit = await store.collection('audit').where('actorId', '==', uid).get();
@@ -143,7 +185,7 @@ async function deleteAccount() {
   await store.recursiveDelete(store.doc(`calendars/${uid}`));
   for (const collection of ['profiles', 'publishedProfiles', 'staffAccess']) await store.doc(`${collection}/${uid}`).delete();
   try { await auth.deleteUser(uid); } catch (error) { if (error.code !== 'auth/user-not-found') throw error; }
-  await lockRef.set({ completed: true, completedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await lockRef.set({ completed: true, completedAt: FieldValue.serverTimestamp(), communicationIds: FieldValue.delete() }, { merge: true });
 }
 
 try {
