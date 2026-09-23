@@ -241,7 +241,6 @@ class _CatalogPageState extends State<CatalogPage> {
         children: [
           CatalogHero(
             count: controller.catalog.length,
-            onMatch: controller.catalog.isEmpty ? null : _filter,
             onBrowse: () {
               final anchor = _catalogAnchor.currentContext;
               if (anchor != null) {

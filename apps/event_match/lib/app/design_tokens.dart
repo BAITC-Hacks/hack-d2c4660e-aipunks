@@ -12,7 +12,7 @@ abstract final class AppColors {
   static const blue = Color(0xFFE4EBF4);
   static const border = Color(0xFFE5DFE8);
   static const white = Color(0xFFFFFFFF);
-  static const hero = Color(0xFFF0EDF2);
+  static const hero = Color(0xFFE4DCEE);
   static const plum = Color(0xFF40334F);
 
   static Color categorySurface(String category) => switch (category) {

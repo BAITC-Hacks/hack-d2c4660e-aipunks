@@ -112,7 +112,7 @@ void main() {
         home: DefaultAssetBundle(
           bundle: _MissingPhotoBundle(),
           child: Scaffold(
-            body: CatalogHero(count: 500, onMatch: () {}, onBrowse: () {}),
+            body: CatalogHero(count: 500, onBrowse: () {}),
           ),
         ),
       ),

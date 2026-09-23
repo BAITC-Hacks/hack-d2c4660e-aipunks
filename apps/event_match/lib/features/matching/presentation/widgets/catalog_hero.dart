@@ -6,11 +6,9 @@ class CatalogHero extends StatelessWidget {
   const CatalogHero({
     super.key,
     required this.count,
-    required this.onMatch,
     required this.onBrowse,
   });
   final int count;
-  final VoidCallback? onMatch;
   final VoidCallback onBrowse;
 
   @override
@@ -101,29 +99,17 @@ class CatalogHero extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: compact ? 8 : 24),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (!compact)
-                        FilledButton(
-                          key: const Key('hero-match'),
-                          onPressed: onMatch,
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(child: Text('Найти свою команду')),
-                              SizedBox(width: 14),
-                              Icon(Icons.arrow_outward, size: 18),
-                            ],
-                          ),
-                        ),
-                      TextButton(
-                        onPressed: onBrowse,
-                        child: const Text('Смотреть каталог'),
-                      ),
-                    ],
+                  FilledButton(
+                    key: const Key('hero-browse'),
+                    onPressed: onBrowse,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(child: Text('Смотреть каталог')),
+                        SizedBox(width: 14),
+                        Icon(Icons.arrow_outward, size: 18),
+                      ],
+                    ),
                   ),
                   SizedBox(
                     height: wide
@@ -198,7 +184,7 @@ class CatalogHero extends StatelessWidget {
                             width: 64,
                             height: 64,
                             decoration: BoxDecoration(
-                              color: AppColors.peach,
+                              color: AppColors.primary,
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: AppColors.hero,
@@ -208,7 +194,7 @@ class CatalogHero extends StatelessWidget {
                             child: const Icon(
                               Icons.wb_sunny_outlined,
                               size: 30,
-                              color: AppColors.plum,
+                              color: AppColors.white,
                             ),
                           ),
                         ),

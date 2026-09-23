@@ -991,12 +991,6 @@ class _MatchingScreenState extends State<MatchingScreen> {
                           if (request == null) ...[
                             CatalogHero(
                               count: controller.catalog.length,
-                              onMatch:
-                                  controller.loading ||
-                                      controller.error != null ||
-                                      controller.catalog.isEmpty
-                                  ? null
-                                  : openFilters,
                               onBrowse: browseCatalog,
                             ),
                             SizedBox(height: desktop ? 40 : 28),
