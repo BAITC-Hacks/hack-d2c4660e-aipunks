@@ -14,7 +14,7 @@ Future<void> showContractorDetails(
   Recommendation? recommendation,
 }) => showSidePanel<void>(
   context,
-  barrierLabel: trNullable(context, 'Закрыть профиль'),
+  barrierLabel: tr(context, 'Закрыть профиль'),
   builder: (context) => ContractorDetails(
     contractor: contractor,
     explanation: explanation,

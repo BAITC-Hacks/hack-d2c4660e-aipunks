@@ -9,7 +9,7 @@ Future<T?> showSidePanel<T>(
   required WidgetBuilder builder,
 }) => showDialog<T>(
   context: context,
-  barrierLabel: trNullable(context, barrierLabel),
+  barrierLabel: tr(context, barrierLabel),
   builder: (context) => Dialog(
     alignment: Alignment.centerRight,
     insetPadding: const EdgeInsets.all(24),

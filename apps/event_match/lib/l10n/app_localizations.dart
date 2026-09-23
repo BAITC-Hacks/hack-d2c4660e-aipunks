@@ -89,9 +89,11 @@ class LanguagePicker extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.language, size: 20),
+          if (MediaQuery.sizeOf(context).width >= 600) ...[
           const SizedBox(width: 6),
           Text(code == 'kk' ? 'ҚАЗ' : code.toUpperCase(), style: Theme.of(context).textTheme.labelLarge),
           const Icon(Icons.expand_more, size: 16),
+          ],
         ]),
       ),
     );

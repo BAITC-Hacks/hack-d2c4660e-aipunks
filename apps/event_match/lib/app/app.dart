@@ -67,12 +67,16 @@ class _EventMatchAppState extends State<EventMatchApp> {
   @override
   void initState() {
     super.initState();
+    AppLanguage.instance.addListener(_languageChanged);
+    AppLanguage.instance.load();
     _assistantUid = widget.session?.uid;
     widget.session?.addListener(_identityChanged);
     if (widget.session != null && widget.workspace != null) {
       _router = _createRouter();
     }
   }
+
+  void _languageChanged() { if (mounted) setState(() {}); }
 
   void _identityChanged() {
     if (_assistantUid != widget.session?.uid) {
@@ -365,7 +369,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
     }
     showSidePanel<void>(
       context,
-      barrierLabel: trNullable(context, 'Закрыть помощника'),
+      barrierLabel: tr(context, 'Закрыть помощника'),
       builder: (panelContext) => _assistantPanel(
         panelContext,
         close: () => Navigator.of(panelContext).pop(),
@@ -397,6 +401,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
 
   @override
   void dispose() {
+    AppLanguage.instance.removeListener(_languageChanged);
     _assistantDocked.dispose();
     _assistantPanelFocus.dispose();
     widget.session?.removeListener(_identityChanged);
@@ -411,8 +416,8 @@ class _EventMatchAppState extends State<EventMatchApp> {
       return MaterialApp.router(
         title: 'Event Match',
         debugShowCheckedModeBanner: false,
-        locale: const Locale('ru'),
-        supportedLocales: const [Locale('ru')],
+        locale: AppLanguage.instance.value,
+        supportedLocales: AppLanguage.supported,
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         theme: AppTheme.light,
         routerConfig: _router,
@@ -422,8 +427,8 @@ class _EventMatchAppState extends State<EventMatchApp> {
     return MaterialApp(
       title: 'Event Match',
       debugShowCheckedModeBanner: false,
-      locale: const Locale('ru'),
-      supportedLocales: const [Locale('ru')],
+      locale: AppLanguage.instance.value,
+      supportedLocales: AppLanguage.supported,
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: AppTheme.light,
       builder: _communications,

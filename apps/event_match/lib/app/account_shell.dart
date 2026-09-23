@@ -111,6 +111,7 @@ class AccountShell extends StatelessWidget {
   Widget _navigation(BuildContext context, {bool drawer = false}) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
+      const Align(alignment: Alignment.centerRight, child: LanguagePicker()),
       Padding(
         padding: const EdgeInsets.fromLTRB(12, 16, 12, 24),
         child: Column(

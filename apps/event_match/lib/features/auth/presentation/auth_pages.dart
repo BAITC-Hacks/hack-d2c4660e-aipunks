@@ -358,6 +358,7 @@ class AuthFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
+      actions: const [LanguagePicker()],
       title: TextButton(
         onPressed: () => context.go('/'),
         child: const Text('Event Match'),

@@ -124,7 +124,7 @@ class _CatalogPageState extends State<CatalogPage> {
   Future<void> _filter() async {
     final request = await showSidePanel<MatchRequest>(
       context,
-      barrierLabel: trNullable(context, 'Закрыть условия события'),
+      barrierLabel: tr(context, 'Закрыть условия события'),
       builder: (_) => OrderFilters(
         catalog: controller.catalog,
         initial: controller.lastRequest,

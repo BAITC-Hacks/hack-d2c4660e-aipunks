@@ -999,6 +999,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         child: BrandMark(),
                       ),
                     ),
+                    const LanguagePicker(),
                     if (desktop) ...[
                       TextButton(
                         onPressed: browseCatalog,
