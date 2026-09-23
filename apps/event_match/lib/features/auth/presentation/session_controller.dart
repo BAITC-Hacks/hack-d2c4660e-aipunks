@@ -75,7 +75,12 @@ class SessionController extends ChangeNotifier {
     _staffSubscription = null;
     if (_disposed || generation != _generation || next == null) return;
     try {
-      await repository.ensureAccount(next.uid, next.name, next.email);
+      await repository.ensureAccount(
+        next.uid,
+        next.name,
+        next.email,
+        accountType: next.accountType,
+      );
       if (_disposed || generation != _generation) return;
       _accountSubscription = repository
           .watchAccount(next.uid)
@@ -231,7 +236,10 @@ String? sessionRedirect(SessionController session, Uri uri) {
     if (target.startsWith('/admin') && !session.isStaff) {
       return '/client/events';
     }
-    return target;
+    return target == '/client/events' &&
+            session.account?.accountType == 'contractor'
+        ? '/contractor/overview'
+        : target;
   }
   return null;
 }

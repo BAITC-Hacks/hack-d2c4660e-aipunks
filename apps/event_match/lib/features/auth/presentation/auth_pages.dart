@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/design_tokens.dart';
@@ -22,6 +23,7 @@ class _AuthPageState extends State<AuthPage> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _name = TextEditingController();
+  String _accountType = 'client';
   bool _register = false;
   bool _reset = false;
   bool _busy = false;
@@ -62,7 +64,14 @@ class _AuthPageState extends State<AuthPage> {
             'Если аккаунт с таким email существует, на него отправлено письмо для восстановления.',
       );
     } else if (_register) {
-      _run(() => widget.auth.register(_email.text, _password.text, _name.text));
+      _run(
+        () => widget.auth.register(
+          _email.text,
+          _password.text,
+          _name.text,
+          accountType: _accountType,
+        ),
+      );
     } else {
       _run(() => widget.auth.signIn(_email.text, _password.text));
     }
@@ -87,17 +96,51 @@ class _AuthPageState extends State<AuthPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (_register && !_reset) ...[
+              Text('Кто вы?', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  for (final type in const ['client', 'contractor'])
+                    ChoiceChip(
+                      key: Key('account-type-$type'),
+                      avatar: Icon(
+                        type == 'client'
+                            ? Icons.person_outline
+                            : Icons.work_outline,
+                        size: 20,
+                      ),
+                      label: Text(type == 'client' ? 'Клиент' : 'Подрядчик'),
+                      selected: _accountType == type,
+                      onSelected: _busy
+                          ? null
+                          : (_) => setState(() => _accountType = type),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _accountType == 'client'
+                    ? 'Хочу найти команду для своего мероприятия.'
+                    : 'Хочу предлагать услуги и находить клиентов.',
+              ),
+              const SizedBox(height: 24),
               TextFormField(
                 controller: _name,
                 enabled: !_busy,
                 textCapitalization: TextCapitalization.words,
                 autofillHints: const [AutofillHints.name],
-                decoration: const InputDecoration(labelText: 'Как вас зовут'),
-                validator: (value) => value == null || value.trim().isEmpty
+                decoration:  InputDecoration(labelText: trNullable(context, 'Как вас зовут')),
+                validator: localizeValidator(context, (value) => value == null || value.trim().isEmpty
                     ? 'Введите имя'
                     : value.trim().length > 100
                     ? 'Не больше 100 символов'
-                    : null,
+                    : null),
               ),
               const SizedBox(height: 16),
             ],
@@ -107,14 +150,14 @@ class _AuthPageState extends State<AuthPage> {
               enabled: !_busy,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
-              decoration: const InputDecoration(labelText: 'Email'),
-              validator: (value) =>
+              decoration:  InputDecoration(labelText: trNullable(context, 'Email')),
+              validator: localizeValidator(context, (value) =>
                   value == null ||
                       !RegExp(
                         r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
                       ).hasMatch(value.trim())
                   ? 'Введите корректный email'
-                  : null,
+                  : null),
             ),
             if (!_reset) ...[
               const SizedBox(height: 16),
@@ -129,10 +172,10 @@ class _AuthPageState extends State<AuthPage> {
                       : AutofillHints.password,
                 ],
                 decoration: InputDecoration(
-                  labelText: 'Пароль',
-                  helperText: _register ? 'Не менее 8 символов' : null,
+                  labelText: trNullable(context, 'Пароль'),
+                  helperText: trNullable(context, _register ? 'Не менее 8 символов' : null),
                   suffixIcon: IconButton(
-                    tooltip: _obscure ? 'Показать пароль' : 'Скрыть пароль',
+                    tooltip: trNullable(context, _obscure ? 'Показать пароль' : 'Скрыть пароль'),
                     onPressed: () => setState(() => _obscure = !_obscure),
                     icon: Icon(
                       _obscure
@@ -141,11 +184,11 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                 ),
-                validator: (value) => value == null || value.isEmpty
+                validator: localizeValidator(context, (value) => value == null || value.isEmpty
                     ? 'Введите пароль'
                     : _register && value.length < 8
                     ? 'Не менее 8 символов'
-                    : null,
+                    : null),
                 onFieldSubmitted: (_) {
                   if (!_busy) _submit();
                 },
@@ -169,13 +212,13 @@ class _AuthPageState extends State<AuthPage> {
             ),
             if (!_reset) ...[
               const SizedBox(height: 12),
-              if (widget.auth is! LocalAuthGateway)
+              if (!_register && widget.auth is! LocalAuthGateway)
                 OutlinedButton.icon(
                   onPressed: _busy
                       ? null
                       : () => _run(widget.auth.signInWithGoogle),
                   icon: const Icon(Icons.account_circle_outlined),
-                  label: const Text('Продолжить с Google'),
+                  label:  Text(tr(context, 'Продолжить с Google')),
                 ),
               const SizedBox(height: 8),
               TextButton(
@@ -201,7 +244,7 @@ class _AuthPageState extends State<AuthPage> {
                           _error = null;
                           _message = null;
                         }),
-                  child: const Text('Забыли пароль?'),
+                  child:  Text(tr(context, 'Забыли пароль?')),
                 ),
             ] else
               TextButton(
@@ -212,12 +255,12 @@ class _AuthPageState extends State<AuthPage> {
                         _error = null;
                         _message = null;
                       }),
-                child: const Text('Вернуться ко входу'),
+                child:  Text(tr(context, 'Вернуться ко входу')),
               ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: _busy ? null : () => context.go('/'),
-              child: const Text('Продолжить просмотр каталога'),
+              child:  Text(tr(context, 'Продолжить просмотр каталога')),
             ),
           ],
         ),
@@ -285,17 +328,17 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
                   widget.auth.sendVerification,
                   'Письмо отправлено повторно. Проверьте также папку «Спам».',
                 ),
-          child: const Text('Отправить письмо ещё раз'),
+          child:  Text(tr(context, 'Отправить письмо ещё раз')),
         ),
         TextButton(
           onPressed: _busy
               ? null
               : () => _run(widget.auth.signOut, 'Вы вышли из аккаунта.'),
-          child: const Text('Войти в другой аккаунт'),
+          child:  Text(tr(context, 'Войти в другой аккаунт')),
         ),
         TextButton(
           onPressed: () => context.go('/'),
-          child: const Text('Вернуться в каталог'),
+          child:  Text(tr(context, 'Вернуться в каталог')),
         ),
       ],
     ),

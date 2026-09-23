@@ -80,7 +80,12 @@ class LocalWorkspaceRepository extends WorkspaceRepository
   Stream<ContractorProfile?> watchProfile(String uid) =>
       _watch('getProfile', uid, ContractorProfile.fromMap);
   @override
-  Future<void> ensureAccount(String uid, String name, String email) async {
+  Future<void> ensureAccount(
+    String uid,
+    String name,
+    String email, {
+    String accountType = 'client',
+  }) async {
     await _call('ensureAccount', {'uid': uid});
   }
 

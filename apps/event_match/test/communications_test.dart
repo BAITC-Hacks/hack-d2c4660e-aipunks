@@ -76,16 +76,10 @@ void main() {
       CommunicationScope.maybeOf(context)!.openAssistant(context);
       await tester.pumpAndSettle();
       expect(find.byType(AssistantScreen), findsOneWidget);
-      final rect = tester.getRect(
-        find
-            .descendant(
-              of: find.byType(Dialog),
-              matching: find.byType(Scaffold),
-            )
-            .first,
-      );
-      expect(rect.right, closeTo(size.width - 24, 1));
-      if (size.width > 700) expect(rect.width, 640);
+      final rect = tester.getRect(find.byKey(const Key('assistant-panel')));
+      expect(rect.right, closeTo(size.width, 1));
+      expect(rect.width, size.width >= 1400 ? 416 : size.width);
+      expect(find.byType(Dialog), findsNothing);
       final screen = tester.widget<AssistantScreen>(
         find.byType(AssistantScreen),
       );
@@ -122,6 +116,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsNothing);
+      expect(find.byKey(const Key('assistant-panel')), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }

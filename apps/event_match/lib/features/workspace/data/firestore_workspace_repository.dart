@@ -36,21 +36,26 @@ class FirestoreWorkspaceRepository extends WorkspaceRepository {
   Stream<StaffAccess?> watchStaff(String uid) =>
       _watch('staffAccess/$uid', StaffAccess.fromMap);
   @override
-  Future<void> ensureAccount(String uid, String name, String email) =>
-      db.runTransaction((tx) async {
-        final ref = _doc('accounts/$uid');
-        if ((await tx.get(ref)).exists) return;
-        tx.set(ref, {
-          'uid': uid,
-          'name': name.trim(),
-          'email': email,
-          'status': 'active',
-          'deletionRequested': false,
-          'revision': 1,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      });
+  Future<void> ensureAccount(
+    String uid,
+    String name,
+    String email, {
+    String accountType = 'client',
+  }) => db.runTransaction((tx) async {
+    final ref = _doc('accounts/$uid');
+    if ((await tx.get(ref)).exists) return;
+    tx.set(ref, {
+      'uid': uid,
+      'name': name.trim(),
+      'email': email,
+      'accountType': accountType,
+      'status': 'active',
+      'deletionRequested': false,
+      'revision': 1,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  });
   @override
   Future<void> updateName(String uid, String name) =>
       db.runTransaction((tx) async {

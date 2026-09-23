@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 import 'ai_explanation.dart';
@@ -13,7 +14,7 @@ Future<void> showContractorDetails(
   Recommendation? recommendation,
 }) => showSidePanel<void>(
   context,
-  barrierLabel: 'Закрыть профиль',
+  barrierLabel: trNullable(context, 'Закрыть профиль'),
   builder: (context) => ContractorDetails(
     contractor: contractor,
     explanation: explanation,
@@ -65,7 +66,7 @@ class ContractorDetails extends StatelessWidget {
               ),
               IconButton(
                 autofocus: true,
-                tooltip: 'Закрыть профиль',
+                tooltip: trNullable(context, 'Закрыть профиль'),
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
               ),
@@ -135,8 +136,8 @@ class ContractorDetails extends StatelessWidget {
                               ),
                             ),
                           if (recommendation!.equivalent)
-                            const Text(
-                              'В данных недостаточно отличий — не считаем этот вариант уникально лучшим.',
+                             Text(
+                              tr(context, 'В данных недостаточно отличий — не считаем этот вариант уникально лучшим.'),
                             ),
                         ],
                       ),
@@ -156,9 +157,9 @@ class ContractorDetails extends StatelessWidget {
                               : 'Анонимизированный профиль',
                         ),
                         if (c.priceImputed)
-                          const Text('Цена заполнена при подготовке датасета'),
+                           Text(tr(context, 'Цена заполнена при подготовке датасета')),
                         if (c.cityImputed)
-                          const Text('Город заполнен при подготовке датасета'),
+                           Text(tr(context, 'Город заполнен при подготовке датасета')),
                         const SizedBox(height: 8),
                         Text(
                           c.isLive
@@ -195,7 +196,7 @@ class ContractorDetails extends StatelessWidget {
                                     context,
                                   )!.openMessages(context, c),
                             icon: const Icon(Icons.chat_bubble_outline),
-                            label: const Text('Написать подрядчику'),
+                            label:  Text(tr(context, 'Написать подрядчику')),
                           ),
                         ],
                       ),

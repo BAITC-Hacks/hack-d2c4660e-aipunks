@@ -4,7 +4,12 @@ import 'workspace_models.dart';
 abstract class WorkspaceRepository {
   Stream<Account?> watchAccount(String uid);
   Stream<StaffAccess?> watchStaff(String uid);
-  Future<void> ensureAccount(String uid, String name, String email);
+  Future<void> ensureAccount(
+    String uid,
+    String name,
+    String email, {
+    String accountType = 'client',
+  });
   Future<void> updateName(String uid, String name);
   Future<void> deactivateAccount(String uid, {bool requestDeletion = false});
   Future<ContractorProfile?> getProfile(String uid);

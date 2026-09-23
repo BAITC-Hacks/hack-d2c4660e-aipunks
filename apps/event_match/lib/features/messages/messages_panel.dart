@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -43,7 +44,7 @@ Future<void> showMessagesPanel(
   Contractor? contractor,
 }) => showSidePanel<void>(
   context,
-  barrierLabel: 'Закрыть сообщения',
+  barrierLabel: trNullable(context, 'Закрыть сообщения'),
   builder: (_) => ListenableBuilder(
     listenable: session,
     builder: (context, _) => MessagesPanel(
@@ -203,7 +204,7 @@ class _MessagesPanelState extends State<MessagesPanel> {
       leading: _thread == null
           ? null
           : IconButton(
-              tooltip: 'Все переписки',
+              tooltip: trNullable(context, 'Все переписки'),
               onPressed: _sending
                   ? null
                   : () {
@@ -226,7 +227,7 @@ class _MessagesPanelState extends State<MessagesPanel> {
       actions: [
         IconButton(
           autofocus: true,
-          tooltip: 'Закрыть сообщения',
+          tooltip: trNullable(context, 'Закрыть сообщения'),
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.close),
         ),
@@ -241,14 +242,14 @@ class _MessagesPanelState extends State<MessagesPanel> {
                 children: [
                   const Icon(Icons.forum_outlined, size: 48),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Войдите, чтобы написать подрядчику и сохранить переписку.',
+                   Text(
+                    tr(context, 'Войдите, чтобы написать подрядчику и сохранить переписку.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
                   FilledButton(
                     onPressed: widget.onSignIn,
-                    child: const Text('Войти в аккаунт'),
+                    child:  Text(tr(context, 'Войти в аккаунт')),
                   ),
                 ],
               ),
@@ -262,10 +263,10 @@ class _MessagesPanelState extends State<MessagesPanel> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      Text(_error!, semanticsLabel: _error),
+                      Text(_error!, semanticsLabel: trNullable(context, _error)),
                       TextButton(
                         onPressed: _refresh,
-                        child: const Text('Повторить'),
+                        child:  Text(tr(context, 'Повторить')),
                       ),
                     ],
                   ),
@@ -354,8 +355,8 @@ class _MessagesPanelState extends State<MessagesPanel> {
                             minLines: 1,
                             maxLines: 4,
                             maxLength: 4000,
-                            decoration: const InputDecoration(
-                              labelText: 'Сообщение подрядчику',
+                            decoration:  InputDecoration(
+                              labelText: trNullable(context, 'Сообщение подрядчику'),
                               counterText: '',
                             ),
                           ),
@@ -363,7 +364,7 @@ class _MessagesPanelState extends State<MessagesPanel> {
                         const SizedBox(width: 8),
                         IconButton.filled(
                           key: const Key('send-message'),
-                          tooltip: 'Отправить сообщение',
+                          tooltip: trNullable(context, 'Отправить сообщение'),
                           onPressed: _sending ? null : _send,
                           icon: Icon(
                             _sending

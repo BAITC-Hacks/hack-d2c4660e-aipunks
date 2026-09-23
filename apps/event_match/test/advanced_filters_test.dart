@@ -33,8 +33,8 @@ void main() {
       await tapKey('advanced-filters-toggle');
       expect(find.byType(Dialog), findsNothing);
       await tester.enterText(find.byKey(const Key('budget-input')), '500000');
-      await tapKey('cancel-filters');
-      expect(find.text('Ваша подборка'), findsNothing);
+      await tapKey('advanced-filters-toggle');
+      expect(find.byKey(const Key('selection-title')), findsNothing);
       await tapKey('advanced-filters-toggle');
       expect(value('budget-input'), '1000000');
       await tester.enterText(find.byKey(const Key('budget-input')), '0');
@@ -48,14 +48,14 @@ void main() {
       await tester.pumpAndSettle();
       await tapKey('apply-filters');
       expect(find.byKey(const Key('budget-input')), findsNothing);
-      expect(find.text('Ваша подборка'), findsOneWidget);
-      expect(find.text('русский'), findsOneWidget);
+      expect(find.byKey(const Key('selection-title')), findsOneWidget);
+      expect(find.text('русский'), findsWidgets);
       await tapKey('advanced-filters-toggle');
       expect(value('hours-input'), '4.0');
       await tester.enterText(find.byKey(const Key('hours-input')), '-1');
       await tapKey('apply-filters');
       expect(find.text('Введите число больше нуля'), findsOneWidget);
-      await tapKey('cancel-filters');
+      await tapKey('advanced-filters-toggle');
       expect(find.text('4.0 ч'), findsOneWidget);
       await tapKey('reset-filters');
       expect(find.text('Каталог · 500 профилей'), findsOneWidget);

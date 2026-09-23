@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -189,7 +190,7 @@ class _FirebaseBootstrapState extends State<FirebaseBootstrap> {
         if (_demo)
           TextButton(
             onPressed: _retry,
-            child: const Text('Вернуться ко входу'),
+            child:  Text(tr(context, 'Вернуться ко входу')),
           ),
       ],
     ),
@@ -207,8 +208,8 @@ class _FirebaseBootstrapState extends State<FirebaseBootstrap> {
                     if (!snapshot.hasError) ...[
                       const Center(child: CircularProgressIndicator()),
                       const SizedBox(height: 24),
-                      const Text(
-                        'Подключаем Event Match…',
+                       Text(
+                        tr(context, 'Подключаем Event Match…'),
                         textAlign: TextAlign.center,
                       ),
                     ] else ...[
@@ -226,12 +227,12 @@ class _FirebaseBootstrapState extends State<FirebaseBootstrap> {
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: _retry,
-                        child: const Text('Повторить'),
+                        child:  Text(tr(context, 'Повторить')),
                       ),
                       const SizedBox(height: 12),
                       OutlinedButton(
                         onPressed: () => setState(() => _demo = true),
-                        child: const Text('Открыть демо-каталог'),
+                        child:  Text(tr(context, 'Открыть демо-каталог')),
                       ),
                     ],
                   ],

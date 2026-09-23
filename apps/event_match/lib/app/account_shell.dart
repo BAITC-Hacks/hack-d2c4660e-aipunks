@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/presentation/session_controller.dart';
@@ -129,8 +130,8 @@ class AccountShell extends StatelessWidget {
         key: ValueKey(_mode),
         initialValue: _mode,
         isExpanded: true,
-        decoration: const InputDecoration(
-          labelText: 'Кабинет',
+        decoration:  InputDecoration(
+          labelText: trNullable(context, 'Кабинет'),
           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
         items: [
@@ -173,19 +174,19 @@ class AccountShell extends StatelessWidget {
       const Divider(height: 32),
       ListTile(
         leading: const Icon(Icons.auto_awesome_outlined),
-        title: const Text('ИИ-помощник'),
+        title:  Text(tr(context, 'ИИ-помощник')),
         onTap: () =>
             CommunicationScope.maybeOf(context)?.openAssistant(context),
       ),
       ListTile(
         leading: const Icon(Icons.chat_bubble_outline),
-        title: const Text('Сообщения'),
+        title:  Text(tr(context, 'Сообщения')),
         onTap: () =>
             CommunicationScope.maybeOf(context)?.openMessages(context, null),
       ),
       ListTile(
         leading: const Icon(Icons.search_outlined),
-        title: const Text('Каталог'),
+        title:  Text(tr(context, 'Каталог')),
         onTap: () {
           if (drawer) Navigator.pop(context);
           context.go('/');
@@ -193,7 +194,7 @@ class AccountShell extends StatelessWidget {
       ),
       ListTile(
         leading: const Icon(Icons.logout_outlined),
-        title: const Text('Выйти'),
+        title:  Text(tr(context, 'Выйти')),
         onTap: () async {
           if (drawer) Navigator.pop(context);
           try {

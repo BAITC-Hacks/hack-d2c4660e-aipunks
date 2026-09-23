@@ -226,13 +226,13 @@ void main() {
       await tester.tap(find.byKey(const Key('assistant-send')));
       await tester.pumpAndSettle();
       expect(service.texts, ['Фотограф на свадьбу в Астане до 300 тысяч']);
-      expect(find.text('Предварительная подборка'), findsOneWidget);
+      expect(find.text('Предварительная подборка · 2'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('assistant-action-date-1')),
         findsOneWidget,
       );
       await tester.ensureVisible(
-        find.byKey(const ValueKey('assistant-contractor-first')),
+        find.byKey(const ValueKey('comparison-profile-first')),
       );
       await tester.pumpAndSettle();
       expect(find.text('Первый фотограф'), findsOneWidget);
@@ -310,7 +310,7 @@ void main() {
       addTearDown(controller.dispose);
       await tester.pumpWidget(_app(controller));
       await tester.pumpAndSettle();
-      final details = find.widgetWithText(OutlinedButton, 'Подробнее').first;
+      final details = find.byKey(const ValueKey('profile-first'));
       await tester.ensureVisible(details);
       await tester.pumpAndSettle();
       await tester.tap(details);
@@ -319,15 +319,12 @@ void main() {
       expect(find.text('Полное описание'), findsOneWidget);
       await tester.tap(find.byTooltip('Закрыть профиль'));
       await tester.pumpAndSettle();
-      final compare = find.widgetWithText(OutlinedButton, 'Сравнить').first;
-      await tester.ensureVisible(compare);
-      await tester.pumpAndSettle();
-      await tester.tap(compare);
-      await tester.pumpAndSettle();
-      expect(find.text('Сравнение подборки'), findsOneWidget);
-      expect(find.text('Языки: русский, казахский'), findsWidgets);
-      await tester.tap(find.byTooltip('Закрыть сравнение'));
-      await tester.pumpAndSettle();
+      expect(find.text('Сравнить'), findsNothing);
+      expect(
+        find.byKey(const Key('recommendation-comparison')),
+        findsOneWidget,
+      );
+      expect(find.text('русский, казахский'), findsOneWidget);
       final reject = find.widgetWithText(TextButton, 'Не подходит').first;
       await tester.ensureVisible(reject);
       await tester.pumpAndSettle();
@@ -424,7 +421,7 @@ void main() {
           contains(turn.message),
         );
         expect(tester.widget<Semantics>(live).properties.liveRegion, isTrue);
-        final details = find.byKey(const ValueKey('assistant-details-first'));
+        final details = find.byKey(const ValueKey('profile-first'));
         await tester.ensureVisible(details);
         await tester.pumpAndSettle();
         expect(

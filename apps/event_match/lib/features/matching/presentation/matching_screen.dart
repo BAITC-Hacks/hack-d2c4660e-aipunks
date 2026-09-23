@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../data/catalog_repository.dart';
 import '../data/api_recommendation_service.dart';
@@ -14,6 +15,12 @@ import 'favorites_page.dart';
 import 'widgets/favorite_folder_picker.dart';
 import 'widgets/alternative_dates_strip.dart';
 import '../../../app/communication_scope.dart';
+import '../../assistant/domain/assistant_models.dart';
+import '../../assistant/presentation/assistant_controller.dart';
+import '../../assistant/presentation/widgets/assistant_recommendations.dart';
+import 'selection_presentation.dart';
+import 'widgets/selection_overview.dart';
+import 'widgets/recommendation_comparison.dart';
 
 class MatchingScreen extends StatefulWidget {
   const MatchingScreen({
@@ -24,12 +31,14 @@ class MatchingScreen extends StatefulWidget {
     this.onOpenAssistant,
     this.onOpenAccount,
     this.onOpenLiveCatalog,
+    this.assistantController,
   });
   final CatalogRepository repository;
   final RecommendationService? service;
   final FavoritesRepository? favoritesRepository;
   final ValueChanged<MatchRequest?>? onOpenAssistant;
   final VoidCallback? onOpenAccount, onOpenLiveCatalog;
+  final AssistantController? assistantController;
   @override
   State<MatchingScreen> createState() => _MatchingScreenState();
 }
@@ -50,6 +59,44 @@ class _MatchingScreenState extends State<MatchingScreen> {
   final summaryAttempts = <String>{};
   bool summaryBusy = false;
   bool summaryFailed = false;
+  AssistantTurn? _assistantTurn;
+  AssistantTurn? _lastAssistantTurn;
+
+  MatchRequest? get _filterRequest {
+    if (_assistantTurn == null) return controller.lastRequest;
+    try {
+      return _assistantTurn!.brief.toMatchRequest();
+    } on StateError {
+      return null;
+    } on FormatException {
+      return null;
+    } on ArgumentError {
+      return null;
+    }
+  }
+
+  void _assistantChanged() {
+    final latest = widget.assistantController?.turn;
+    if (!identical(latest, _lastAssistantTurn)) {
+      _lastAssistantTurn = latest;
+      setState(() {
+        _assistantTurn = latest?.result == null ? null : latest;
+        filtersExpanded = false;
+      });
+      if (_assistantTurn != null) controller.clearResult();
+      if (pageScroll.hasClients) pageScroll.jumpTo(0);
+    } else if (_assistantTurn != null) {
+      setState(
+        () {},
+      ); // Busy/error state disables actions on the same shortlist.
+    }
+  }
+
+  Future<void> _search(MatchRequest request) async {
+    setState(() => _assistantTurn = null);
+    await controller.search(request);
+  }
+
   bool get aiEnabled =>
       controller.service is ApiRecommendationService &&
       (controller.service as ApiRecommendationService).aiEnabled;
@@ -59,6 +106,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         !aiEnabled ||
         summaryBusy ||
         summaryFailed ||
+        _assistantTurn != null ||
         controller.result != null ||
         controller.status == SearchStatus.searching) {
       return;
@@ -97,7 +145,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   void showHelp() => showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('От события — к вашей команде'),
+      title:  Text(tr(context, 'От события — к вашей команде')),
       content: const SingleChildScrollView(
         child: Text(
           '1. Посмотрите каталог и выберите категорию.\n\n'
@@ -109,7 +157,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Понятно'),
+          child:  Text(tr(context, 'Понятно')),
         ),
       ],
     ),
@@ -123,10 +171,26 @@ class _MatchingScreenState extends State<MatchingScreen> {
     favorites = FavoritesController(
       widget.favoritesRepository ?? LocalFavoritesRepository(),
     )..load();
+    _lastAssistantTurn = widget.assistantController?.turn;
+    _assistantTurn = _lastAssistantTurn?.result == null
+        ? null
+        : _lastAssistantTurn;
+    widget.assistantController?.addListener(_assistantChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant MatchingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.assistantController != widget.assistantController) {
+      oldWidget.assistantController?.removeListener(_assistantChanged);
+      widget.assistantController?.addListener(_assistantChanged);
+      _assistantChanged();
+    }
   }
 
   @override
   void dispose() {
+    widget.assistantController?.removeListener(_assistantChanged);
     searchInput.dispose();
     catalogFocus.dispose();
     pageScroll.dispose();
@@ -142,13 +206,17 @@ class _MatchingScreenState extends State<MatchingScreen> {
       builder: (_) => FavoriteFolderPicker(
         controller: favorites,
         contractor: contractor,
-        request: controller.result == null ? null : controller.lastRequest,
+        request: _assistantTurn != null
+            ? _filterRequest
+            : controller.result == null
+            ? null
+            : controller.lastRequest,
       ),
     );
     if (changed == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Избранное обновлено'),
+          content:  Text(tr(context, 'Избранное обновлено')),
           action: SnackBarAction(label: 'Открыть', onPressed: openFavorites),
         ),
       );
@@ -165,7 +233,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
     );
     if (request != null && mounted) {
       if (pageScroll.hasClients) pageScroll.jumpTo(0);
-      await controller.search(request);
+      await _search(request);
     }
   }
 
@@ -191,7 +259,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         final size = MediaQuery.sizeOf(dialogContext);
         final content = OrderFilters(
           catalog: controller.catalog,
-          initial: controller.lastRequest,
+          initial: _filterRequest,
         );
         if (size.width < 700) return Dialog.fullscreen(child: content);
         return Dialog(
@@ -203,7 +271,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
     );
     if (request != null && mounted) {
       if (pageScroll.hasClients) pageScroll.jumpTo(0);
-      await controller.search(request);
+      await _search(request);
     }
   }
 
@@ -299,6 +367,99 @@ class _MatchingScreenState extends State<MatchingScreen> {
   );
 
   Widget results() {
+    final assistant = _assistantTurn;
+    final assistantResult = assistant?.result;
+    if (assistant != null && assistantResult != null) {
+      final brief = assistant.brief;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SelectionOverview(
+            presentation: SelectionPresentation(
+              outcome: assistantResult.outcome,
+              count: assistantResult.recommendations.length,
+              summary: assistantResult.summary,
+              preliminary: assistantResult.preliminary,
+            ),
+            unchecked: assistantResult.unchecked,
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final value in [
+                brief.city,
+                brief.category,
+                brief.eventFormat,
+                brief.date,
+                if (brief.budgetKzt != null)
+                  '${brief.budgetScope == 'event' ? 'Общий бюджет' : 'До'} ${money(brief.budgetKzt!)} ₸',
+                brief.language,
+                if (brief.hours != null) '${brief.hours} ч',
+              ].whereType<String>())
+                Chip(label: Text(value)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          AssistantRecommendations(
+            recommendations: assistantResult.toMatchResult().recommendations,
+            unverified: {
+              for (final r in assistantResult.recommendations)
+                r.contractor.id: {
+                  ...assistantResult.unchecked,
+                  ...r.unchecked,
+                }.toList(),
+            },
+            preliminary: assistantResult.preliminary,
+            isFavorite: favorites.contains,
+            onFavorite: saveFavorite,
+            enabled:
+                widget.assistantController?.busy == false &&
+                widget.assistantController?.error == null,
+            onReject: (id, reason) async {
+              await widget.assistantController?.act(
+                AssistantAction(
+                  id: 'manual:reject:$id',
+                  label: 'Не подходит',
+                  type: 'reject',
+                  value: {
+                    'contractor_id': id,
+                    'reason': switch (reason) {
+                      'Дорого' => 'price',
+                      'Не мой стиль' => 'style',
+                      'Мало информации' => 'experience',
+                      _ => 'other',
+                    },
+                    'detail': reason,
+                  },
+                ),
+              );
+            },
+          ),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => widget.onOpenAssistant?.call(null),
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label:  Text(tr(context, 'Уточнить с помощником')),
+              ),
+              TextButton(
+                onPressed: browseCatalog,
+                child:  Text(tr(context, 'Вернуться в каталог')),
+              ),
+            ],
+          ),
+          if (widget.assistantController?.error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(widget.assistantController!.error!),
+            ),
+          const SizedBox(height: 24),
+        ],
+      );
+    }
     if (controller.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -308,7 +469,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         controller.error!,
         action: TextButton(
           onPressed: controller.load,
-          child: const Text('Повторить загрузку'),
+          child:  Text(tr(context, 'Повторить загрузку')),
         ),
       );
     }
@@ -326,8 +487,8 @@ class _MatchingScreenState extends State<MatchingScreen> {
         'Не удалось выполнить подбор',
         controller.searchError!,
         action: TextButton(
-          onPressed: () => controller.search(controller.lastRequest!),
-          child: const Text('Повторить подбор'),
+          onPressed: () => _search(controller.lastRequest!),
+          child:  Text(tr(context, 'Повторить подбор')),
         ),
       );
     }
@@ -336,28 +497,24 @@ class _MatchingScreenState extends State<MatchingScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(
-            liveRegion: true,
-            child: message(
-              switch (result.outcome) {
-                MatchOutcome.matched => 'Ваша подборка',
-                MatchOutcome.categoryAbsent =>
-                  'В этом городе категории пока нет',
-                MatchOutcome.noEligible => 'Нет подходящих кандидатов',
-              },
-              result.summary,
-              action: result.outcome == MatchOutcome.matched
-                  ? null
-                  : OutlinedButton(
-                      onPressed: openFilters,
-                      child: const Text('Изменить условия'),
-                    ),
+          SelectionOverview(
+            presentation: SelectionPresentation(
+              outcome: result.outcome,
+              count: result.recommendations.length,
+              summary: result.summary,
             ),
+            action: result.outcome == MatchOutcome.matched
+                ? null
+                : OutlinedButton(
+                    onPressed: openFilters,
+                    child:  Text(tr(context, 'Изменить условия')),
+                  ),
           ),
           const SizedBox(height: 24),
-          cardList(
-            result.recommendations.map((r) => r.contractor).toList(),
+          RecommendationComparison(
             recommendations: result.recommendations,
+            isFavorite: favorites.contains,
+            onFavorite: saveFavorite,
           ),
           if (result.notice.isNotEmpty)
             Padding(
@@ -383,7 +540,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                     ),
                     onPressed: () {
                       if (pageScroll.hasClients) pageScroll.jumpTo(0);
-                      controller.search(result.relaxations[i].request);
+                      _search(result.relaxations[i].request);
                     },
                     child: Text(result.relaxations[i].label),
                   ),
@@ -418,8 +575,8 @@ class _MatchingScreenState extends State<MatchingScreen> {
         cardList(browsed.take(visibleCount).toList()),
         if (summaryFailed && aiEnabled) ...[
           const SizedBox(height: 16),
-          const Text(
-            'Часть AI-сводок недоступна. Показаны исходные описания из каталога.',
+           Text(
+            tr(context, 'Часть AI-сводок недоступна. Показаны исходные описания из каталога.'),
           ),
           Align(
             alignment: Alignment.centerLeft,
@@ -428,7 +585,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 summaryFailed = false;
                 summaryAttempts.removeWhere((id) => !summaries.containsKey(id));
               }),
-              child: const Text('Повторить загрузку объяснений'),
+              child:  Text(tr(context, 'Повторить загрузку объяснений')),
             ),
           ),
         ],
@@ -443,7 +600,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
           Center(
             child: OutlinedButton(
               onPressed: () => setState(() => visibleCount += 12),
-              child: const Text('Показать ещё'),
+              child:  Text(tr(context, 'Показать ещё')),
             ),
           ),
         ],
@@ -452,6 +609,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
   }
 
   void browseCatalog() {
+    setState(() => _assistantTurn = null);
     controller.clearResult();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final target = catalogAnchor.currentContext;
@@ -472,7 +630,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         !controller.loading &&
         controller.error == null &&
         controller.catalog.isNotEmpty;
-    final label = controller.lastRequest == null
+    final label = controller.lastRequest == null && _assistantTurn == null
         ? 'Подобрать под событие'
         : 'Изменить фильтры';
     if (iconOnly) {
@@ -480,7 +638,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         key: const Key('open-filters'),
         style: IconButton.styleFrom(foregroundColor: AppColors.white),
         onPressed: enabled ? openFilters : null,
-        tooltip: label,
+        tooltip: trNullable(context, label),
         icon: const Icon(Icons.tune),
       );
     }
@@ -496,15 +654,13 @@ class _MatchingScreenState extends State<MatchingScreen> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
-        'Команда вашего события',
+        'Условия подбора',
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
           fontWeight: FontWeight.w700,
           letterSpacing: -1,
         ),
       ),
       const SizedBox(height: 12),
-      const Text('Условия подбора', style: TextStyle(color: AppColors.muted)),
-      const SizedBox(height: 16),
       Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -543,7 +699,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
         key: const Key('reset-filters'),
         onPressed: controller.clearResult,
         icon: const Icon(Icons.close, size: 18),
-        label: const Text('Сбросить фильтры'),
+        label:  Text(tr(context, 'Сбросить фильтры')),
       ),
       const SizedBox(height: 24),
     ],
@@ -587,14 +743,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
           visibleCount = 12;
         }),
         decoration: InputDecoration(
-          labelText: 'Поиск в каталоге',
-          hintText: 'Имя подрядчика или город',
+          labelText: trNullable(context, 'Поиск в каталоге'),
+          hintText: trNullable(context, 'Имя подрядчика или город'),
           prefixIcon: const Icon(Icons.search, size: 21),
           fillColor: AppColors.white,
           suffixIcon: query.isEmpty
               ? null
               : IconButton(
-                  tooltip: 'Очистить поиск',
+                  tooltip: trNullable(context, 'Очистить поиск'),
                   onPressed: () {
                     searchInput.clear();
                     setState(() {
@@ -702,9 +858,9 @@ class _MatchingScreenState extends State<MatchingScreen> {
     padding: const EdgeInsets.only(bottom: 20),
     child: SwitchListTile.adaptive(
       contentPadding: EdgeInsets.zero,
-      title: const Text('Объяснения от ИИ'),
-      subtitle: const Text(
-        'Коротко о подрядчике. Без сети остаются исходные описания.',
+      title:  Text(tr(context, 'Объяснения от ИИ')),
+      subtitle:  Text(
+        tr(context, 'Коротко о подрядчике. Без сети остаются исходные описания.'),
       ),
       value: aiEnabled,
       onChanged: controller.status == SearchStatus.searching
@@ -716,7 +872,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         value,
               );
               if (controller.lastRequest != null) {
-                controller.search(controller.lastRequest!);
+                _search(controller.lastRequest!);
               }
             },
     ),
@@ -744,7 +900,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               leading: const Icon(Icons.tune),
-              title: const Text('Расширенные фильтры'),
+              title:  Text(tr(context, 'Расширенные фильтры')),
               subtitle: Text(
                 controller.lastRequest == null
                     ? 'Город, дата, бюджет, язык и длительность'
@@ -762,15 +918,15 @@ class _MatchingScreenState extends State<MatchingScreen> {
           ),
           if (filtersExpanded)
             OrderFilters(
-              key: ValueKey(controller.lastRequest),
+              key: ValueKey(_assistantTurn ?? controller.lastRequest),
               catalog: controller.catalog,
-              initial: controller.lastRequest,
+              initial: _filterRequest,
               embedded: true,
               onCancel: () => setState(() => filtersExpanded = false),
               onApply: (request) {
                 setState(() => filtersExpanded = false);
                 if (pageScroll.hasClients) pageScroll.jumpTo(0);
-                controller.search(request);
+                _search(request);
               },
             ),
         ],
@@ -795,13 +951,13 @@ class _MatchingScreenState extends State<MatchingScreen> {
             TextButton.icon(
               onPressed: showHelp,
               icon: const Icon(Icons.help_outline, size: 18),
-              label: const Text('Как это работает'),
+              label:  Text(tr(context, 'Как это работает')),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Сделано для особенных событий в Казахстане.',
+         Text(
+          tr(context, 'Сделано для особенных событий в Казахстане.'),
           style: TextStyle(fontSize: 12, color: AppColors.muted),
         ),
         const SizedBox(height: 8),
@@ -823,6 +979,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
       final desktop = size.width >= 1200 && !largeText;
       final gutter = size.width < 600 ? 16.0 : 32.0;
       final request = controller.lastRequest;
+      final hasSelection = request != null || _assistantTurn != null;
       WidgetsBinding.instance.addPostFrameCallback((_) => loadNextSummaries());
       return Scaffold(
         appBar: AppBar(
@@ -845,12 +1002,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
                     if (desktop) ...[
                       TextButton(
                         onPressed: browseCatalog,
-                        child: const Text('Каталог специалистов'),
+                        child:  Text(tr(context, 'Каталог специалистов')),
                       ),
                       const SizedBox(width: 8),
                       TextButton(
                         onPressed: showHelp,
-                        child: const Text('Как это работает'),
+                        child:  Text(tr(context, 'Как это работает')),
                       ),
                       const SizedBox(width: 12),
                       const Icon(
@@ -859,21 +1016,21 @@ class _MatchingScreenState extends State<MatchingScreen> {
                         color: AppColors.muted,
                       ),
                       const SizedBox(width: 5),
-                      const Text(
-                        'Казахстан',
+                       Text(
+                        tr(context, 'Казахстан'),
                         style: TextStyle(fontSize: 12, color: AppColors.muted),
                       ),
                       const SizedBox(width: 24),
                     ] else
                       IconButton(
                         onPressed: showHelp,
-                        tooltip: 'Как это работает',
+                        tooltip: trNullable(context, 'Как это работает'),
                         icon: const Icon(Icons.help_outline, size: 22),
                       ),
                     if (!mobile)
                       IconButton(
                         key: const Key('open-assistant'),
-                        tooltip: 'ИИ-помощник',
+                        tooltip: trNullable(context, 'ИИ-помощник'),
                         onPressed: () => widget.onOpenAssistant?.call(
                           controller.lastRequest,
                         ),
@@ -883,14 +1040,14 @@ class _MatchingScreenState extends State<MatchingScreen> {
                       if (!mobile)
                         IconButton(
                           key: const Key('open-messages'),
-                          tooltip: 'Сообщения',
+                          tooltip: trNullable(context, 'Сообщения'),
                           onPressed: () => CommunicationScope.maybeOf(
                             context,
                           )?.openMessages(context, null),
                           icon: const Icon(Icons.chat_bubble_outline),
                         ),
                       PopupMenuButton<String>(
-                        tooltip: 'Кабинеты и живой каталог',
+                        tooltip: trNullable(context, 'Кабинеты и живой каталог'),
                         icon: const Icon(Icons.person_outline),
                         onSelected: (v) {
                           switch (v) {
@@ -937,7 +1094,7 @@ class _MatchingScreenState extends State<MatchingScreen> {
                             : 'open-favorites-mobile',
                       ),
                       onPressed: openFavorites,
-                      tooltip: 'Избранное',
+                      tooltip: trNullable(context, 'Избранное'),
                       icon: const Icon(Icons.favorite_border),
                     ),
                     if (!mobile) matchButton(iconOnly: !desktop),
@@ -988,17 +1145,19 @@ class _MatchingScreenState extends State<MatchingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (request == null) ...[
+                          if (!hasSelection) ...[
                             CatalogHero(
                               count: controller.catalog.length,
                               onBrowse: browseCatalog,
                             ),
                             SizedBox(height: desktop ? 40 : 28),
                             catalogTools(),
-                          ] else
-                            requestSummary(request),
+                          ],
+                          if (hasSelection) results(),
+                          if (request != null) requestSummary(request),
                           if (size.width >= 1200) advancedFilters(),
-                          if (controller.service is ApiRecommendationService)
+                          if (_assistantTurn == null &&
+                              controller.service is ApiRecommendationService)
                             aiToggle(),
                           if (request != null &&
                               controller.dateOptions.isNotEmpty) ...[
@@ -1007,13 +1166,12 @@ class _MatchingScreenState extends State<MatchingScreen> {
                               selectedDate: request.date,
                               enabled:
                                   controller.status != SearchStatus.searching,
-                              onSelected: (date) => controller.search(
-                                request.copyWith(date: date),
-                              ),
+                              onSelected: (date) =>
+                                  _search(request.copyWith(date: date)),
                             ),
                             const SizedBox(height: 24),
                           ],
-                          results(),
+                          if (!hasSelection) results(),
                           footer(),
                         ],
                       ),

@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../workspace/domain/workspace_repository.dart';
 import '../data/firebase_auth_gateway.dart';
@@ -62,7 +63,7 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
+            child:  Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
@@ -92,7 +93,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 8),
-        const Text('Общие для кабинетов заказчика и подрядчика.'),
+         Text(tr(context, 'Общие для кабинетов заказчика и подрядчика.')),
         const SizedBox(height: 24),
         if (_error != null) AuthNotice(message: _error!, error: true),
         if (_message != null) AuthNotice(message: _message!),
@@ -112,13 +113,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   TextFormField(
                     controller: _name,
                     enabled: !_busy,
-                    decoration: const InputDecoration(labelText: 'Имя'),
+                    decoration:  InputDecoration(labelText: trNullable(context, 'Имя')),
                     autofillHints: const [AutofillHints.name],
-                    validator: (s) => s == null || s.trim().isEmpty
+                    validator: localizeValidator(context, (s) => s == null || s.trim().isEmpty
                         ? 'Введите имя'
                         : s.trim().length > 100
                         ? 'Не больше 100 символов'
-                        : null,
+                        : null),
                   ),
                   const SizedBox(height: 16),
                   Text('Email: ${widget.session.identity?.email ?? ''}'),
@@ -170,7 +171,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                               'Письмо для изменения пароля отправлено.',
                             ),
-                      child: const Text('Получить ссылку для смены пароля'),
+                      child:  Text(tr(context, 'Получить ссылку для смены пароля')),
                     ),
                 ],
               ),
@@ -190,22 +191,22 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 12),
                 if (widget.session.isAdmin)
-                  const Text(
-                    'Аккаунт администратора защищён от деактивации и удаления. Сначала передайте управление другому администратору и снимите свою служебную роль доверенным инструментом. После этого здесь появятся действия управления аккаунтом.',
+                   Text(
+                    tr(context, 'Аккаунт администратора защищён от деактивации и удаления. Сначала передайте управление другому администратору и снимите свою служебную роль доверенным инструментом. После этого здесь появятся действия управления аккаунтом.'),
                   )
                 else ...[
-                  const Text(
-                    'Деактивация скрывает профиль и закрывает доступ к кабинетам. Для полного удаления отправьте отдельный запрос.',
+                   Text(
+                    tr(context, 'Деактивация скрывает профиль и закрывает доступ к кабинетам. Для полного удаления отправьте отдельный запрос.'),
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     onPressed: _busy ? null : () => _deactivate(),
-                    child: const Text('Деактивировать аккаунт'),
+                    child:  Text(tr(context, 'Деактивировать аккаунт')),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: _busy ? null : () => _deactivate(deletion: true),
-                    child: const Text('Запросить удаление всех данных'),
+                    child:  Text(tr(context, 'Запросить удаление всех данных')),
                   ),
                 ],
               ],

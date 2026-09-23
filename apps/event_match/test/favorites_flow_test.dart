@@ -11,7 +11,6 @@ import 'package:event_match/features/matching/data/favorites_repository.dart';
 import 'package:event_match/features/matching/domain/matching_engine.dart';
 import 'package:event_match/features/matching/domain/models.dart';
 import 'package:event_match/features/matching/domain/recommendation_service.dart';
-import 'package:event_match/features/matching/presentation/widgets/contractor_card.dart';
 
 class FlowCatalog implements CatalogRepository {
   final profiles = [
@@ -135,10 +134,19 @@ void main() {
         );
         expect(find.text('4 варианта'), findsWidgets);
 
-        final card = tester.widget<ContractorCard>(
-          find.byType(ContractorCard).first,
-        );
-        final heart = find.byKey(ValueKey('favorite-${card.contractor.id}'));
+        final heart = find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is IconButton &&
+                  widget.key is ValueKey<String> &&
+                  (widget.key as ValueKey<String>).value.startsWith(
+                    'favorite-',
+                  ),
+            )
+            .first;
+        final contractorId =
+            (tester.widget<IconButton>(heart).key as ValueKey<String>).value
+                .substring('favorite-'.length);
         await tester.ensureVisible(heart);
         await tester.pumpAndSettle();
         await tester.tap(heart);
@@ -159,10 +167,8 @@ void main() {
         final folder = (await repository.load()).single;
         expect(folder.entries.single.request!.toJson(), next.toJson());
         expect(
-          tester
-              .widget<ContractorCard>(find.byType(ContractorCard).first)
-              .isFavorite,
-          isTrue,
+          tester.widget<IconButton>(heart).tooltip,
+          'Сохранено в избранном',
         );
 
         final nav = find.byKey(
@@ -181,9 +187,7 @@ void main() {
         await tester.tap(folderTile);
         await tester.pumpAndSettle();
         await capture(tester, key, 'favorite-folder-content-$suffix');
-        final restore = find.byKey(
-          ValueKey('restore-search-${card.contractor.id}'),
-        );
+        final restore = find.byKey(ValueKey('restore-search-${contractorId}'));
         await tester.scrollUntilVisible(
           restore,
           300,

@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -8,7 +9,7 @@ Future<T?> showSidePanel<T>(
   required WidgetBuilder builder,
 }) => showDialog<T>(
   context: context,
-  barrierLabel: barrierLabel,
+  barrierLabel: trNullable(context, barrierLabel),
   builder: (context) => Dialog(
     alignment: Alignment.centerRight,
     insetPadding: const EdgeInsets.all(24),

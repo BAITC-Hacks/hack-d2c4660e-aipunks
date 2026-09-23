@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/design_tokens.dart';
 
@@ -89,8 +90,8 @@ class CatalogHero extends StatelessWidget {
                   SizedBox(height: compact ? 12 : 18),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 450),
-                    child: const Text(
-                      'Ведущий, фотограф, флорист — найдите тех, кто почувствует ваше событие. Подберём по городу, дате и бюджету.',
+                    child:  Text(
+                      tr(context, 'Ведущий, фотограф, флорист — найдите тех, кто почувствует ваше событие. Подберём по городу, дате и бюджету.'),
                       style: TextStyle(
                         fontSize: 14,
                         height: 1.65,

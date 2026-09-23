@@ -30,10 +30,11 @@ class Account {
     required this.name,
     required this.email,
     this.status = 'active',
+    this.accountType = 'client',
     this.deletionRequested = false,
     this.revision = 1,
   });
-  final String uid, name, email, status;
+  final String uid, name, email, status, accountType;
   final bool deletionRequested;
   final int revision;
   bool get isActive => status == 'active';
@@ -42,6 +43,7 @@ class Account {
     name: m['name'] as String,
     email: m['email'] as String,
     status: m['status'] as String,
+    accountType: m['accountType'] as String? ?? 'client',
     deletionRequested: m['deletionRequested'] as bool,
     revision: m['revision'] as int,
   );

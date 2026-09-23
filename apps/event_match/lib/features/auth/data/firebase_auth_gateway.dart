@@ -9,11 +9,13 @@ class FirebaseAuthGateway implements AuthGateway {
   Future<void>? _googleInitialization;
   bool _googleUsed = false;
   bool _registering = false;
+  final _registrationTypes = <String, String>{};
 
   AuthIdentity? _identity(User? user) => user == null || user.isAnonymous
       ? null
       : AuthIdentity(
           uid: user.uid,
+          accountType: _registrationTypes[user.uid] ?? 'client',
           email: user.email ?? '',
           name: user.displayName ?? '',
           emailVerified: user.emailVerified,
@@ -32,13 +34,19 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   @override
-  Future<void> register(String email, String password, String name) async {
+  Future<void> register(
+    String email,
+    String password,
+    String name, {
+    String accountType = 'client',
+  }) async {
     _registering = true;
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      _registrationTypes[credential.user!.uid] = accountType;
       await credential.user!.updateDisplayName(name.trim());
       await credential.user!.sendEmailVerification();
     } finally {

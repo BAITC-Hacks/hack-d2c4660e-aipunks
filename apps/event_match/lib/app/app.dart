@@ -1,4 +1,6 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import '../features/assistant/presentation/assistant_host.dart';
@@ -59,6 +61,8 @@ class _EventMatchAppState extends State<EventMatchApp> {
   late final CatalogRepository _demoRepository =
       widget.repository ?? AssetCatalogRepository();
   AssistantSession? _assistantSession;
+  final _assistantDocked = ValueNotifier(false);
+  final _assistantPanelFocus = FocusNode(debugLabel: 'assistant dock');
   String? _assistantUid;
   @override
   void initState() {
@@ -91,7 +95,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
         body: Center(
           child: FilledButton(
             onPressed: () => context.go('/'),
-            child: const Text('Страница не найдена. Открыть каталог'),
+            child:  Text(tr(context, 'Страница не найдена. Открыть каталог')),
           ),
         ),
       ),
@@ -231,10 +235,16 @@ class _EventMatchAppState extends State<EventMatchApp> {
     );
   }
 
-  Widget _home(BuildContext context) => MatchingScreen(
+  AssistantSession get _assistant => _assistantSession ??= AssistantSession(
+    repository: _demoRepository,
+    service: widget.assistantService,
+  );
+
+  Widget _matchingPage(BuildContext context) => MatchingScreen(
     repository: _demoRepository,
     service: widget.recommendationService,
     favoritesRepository: widget.favoritesRepository,
+    assistantController: _assistant.controller,
     onOpenAssistant: (request) => _openAssistant(context, request),
     onOpenAccount: widget.session == null
         ? null
@@ -243,34 +253,123 @@ class _EventMatchAppState extends State<EventMatchApp> {
         ? null
         : () => context.go('/catalog'),
   );
-  void _openAssistant(BuildContext context, [MatchRequest? request]) {
-    final session = _assistantSession ??= AssistantSession(
+
+  Widget _home(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: _assistantDocked,
+    builder: (context, opened, _) => LayoutBuilder(
+      builder: (context, constraints) {
+        final wide =
+            constraints.maxWidth >= 1440 &&
+            MediaQuery.textScalerOf(context).scale(16) <= 24;
+        final panelWidth = wide ? 416.0 : constraints.maxWidth;
+        final mainWidth =
+            constraints.maxWidth - (opened && wide ? panelWidth : 0);
+        return Stack(
+          children: [
+            Positioned.fill(
+              right: opened && wide ? panelWidth : 0,
+              child: Offstage(
+                offstage: opened && !wide,
+                child: ExcludeFocus(
+                  excluding: opened && !wide,
+                  child: MediaQuery(
+                    data: MediaQuery.of(
+                      context,
+                    ).copyWith(size: Size(mainWidth, constraints.maxHeight)),
+                    child: _matchingPage(context),
+                  ),
+                ),
+              ),
+            ),
+            if (opened)
+              Positioned(
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: panelWidth,
+                child: CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(LogicalKeyboardKey.escape):
+                        _closeAssistant,
+                  },
+                  child: Focus(
+                    focusNode: _assistantPanelFocus,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                        ),
+                      ),
+                      child: _assistantPanel(
+                        context,
+                        close: _closeAssistant,
+                        resultsOnPage: true,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    ),
+  );
+
+  void _closeAssistant() {
+    _assistantDocked.value = false;
+  }
+
+  Widget _assistantPanel(
+    BuildContext context, {
+    required VoidCallback close,
+    bool resultsOnPage = false,
+    MatchRequest? request,
+  }) => Scaffold(
+    key: const Key('assistant-panel'),
+    appBar: AppBar(
+      automaticallyImplyLeading: false,
+      title:  Text(tr(context, 'ИИ-помощник')),
+      actions: [
+        IconButton(
+          autofocus: true,
+          tooltip: trNullable(context, 'Закрыть помощника'),
+          onPressed: close,
+          icon: const Icon(Icons.close),
+        ),
+      ],
+    ),
+    body: AssistantHost(
+      showHeading: false,
       repository: _demoRepository,
-      service: widget.assistantService,
-    );
+      session: _assistant,
+      initialRequest: request,
+      resultsOnPage: resultsOnPage,
+      onOpenCatalog: close,
+    ),
+  );
+
+  void _openAssistant(BuildContext context, [MatchRequest? request]) {
+    final session = _assistant;
+    final path = _router?.routeInformationProvider.value.uri.path;
+    if (path == null || path == '/' || path == '/demo') {
+      if (request != null) session.controller.seedFromRequest(request);
+      _assistantDocked.value = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _assistantDocked.value) {
+          _assistantPanelFocus.requestFocus();
+        }
+      });
+      return;
+    }
     showSidePanel<void>(
       context,
-      barrierLabel: 'Закрыть помощника',
-      builder: (panelContext) => Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: const Text('ИИ-помощник'),
-          actions: [
-            IconButton(
-              autofocus: true,
-              tooltip: 'Закрыть помощника',
-              onPressed: () => Navigator.of(panelContext).pop(),
-              icon: const Icon(Icons.close),
-            ),
-          ],
-        ),
-        body: AssistantHost(
-          showHeading: false,
-          repository: _demoRepository,
-          session: session,
-          initialRequest: request,
-          onOpenCatalog: () => Navigator.of(panelContext).pop(),
-        ),
+      barrierLabel: trNullable(context, 'Закрыть помощника'),
+      builder: (panelContext) => _assistantPanel(
+        panelContext,
+        close: () => Navigator.of(panelContext).pop(),
+        request: request,
       ),
     );
   }
@@ -298,6 +397,8 @@ class _EventMatchAppState extends State<EventMatchApp> {
 
   @override
   void dispose() {
+    _assistantDocked.dispose();
+    _assistantPanelFocus.dispose();
     widget.session?.removeListener(_identityChanged);
     _router?.dispose();
     _assistantSession?.dispose();
@@ -363,17 +464,17 @@ class _PublicFrame extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () => context.go('/catalog'),
-                    child: const Text('Опубликованные подрядчики'),
+                    child:  Text(tr(context, 'Опубликованные подрядчики')),
                   ),
                   TextButton(
                     onPressed: () => context.go('/demo'),
-                    child: const Text('Демо-каталог'),
+                    child:  Text(tr(context, 'Демо-каталог')),
                   ),
                   TextButton(
                     onPressed: () => CommunicationScope.maybeOf(
                       context,
                     )?.openAssistant(context),
-                    child: const Text('ИИ-помощник'),
+                    child:  Text(tr(context, 'ИИ-помощник')),
                   ),
                   FilledButton.tonal(
                     onPressed: () => context.go(
@@ -384,7 +485,7 @@ class _PublicFrame extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Сообщения',
+                    tooltip: trNullable(context, 'Сообщения'),
                     icon: const Icon(Icons.chat_bubble_outline),
                     onPressed: () => CommunicationScope.maybeOf(
                       context,
@@ -399,8 +500,8 @@ class _PublicFrame extends StatelessWidget {
               width: double.infinity,
               color: Theme.of(context).colorScheme.secondaryContainer,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: const Text(
-                'Демонстрационные анкеты и даты 23.09–31.12.2026. Они не принадлежат зарегистрированным подрядчикам.',
+              child:  Text(
+                tr(context, 'Демонстрационные анкеты и даты 23.09–31.12.2026. Они не принадлежат зарегистрированным подрядчикам.'),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -438,16 +539,16 @@ class _SessionStatePage extends StatelessWidget {
           if (!session.loading && !restricted)
             FilledButton(
               onPressed: session.retry,
-              child: const Text('Повторить подключение'),
+              child:  Text(tr(context, 'Повторить подключение')),
             ),
           const SizedBox(height: 12),
           OutlinedButton(
             onPressed: () => context.go('/'),
-            child: const Text('Открыть каталог'),
+            child:  Text(tr(context, 'Открыть каталог')),
           ),
           TextButton(
             onPressed: session.signOut,
-            child: const Text('Выйти из аккаунта'),
+            child:  Text(tr(context, 'Выйти из аккаунта')),
           ),
         ],
       ),

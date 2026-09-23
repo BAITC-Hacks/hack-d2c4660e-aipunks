@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/design_tokens.dart';
@@ -135,7 +136,7 @@ class _WorkspaceStreamState<T> extends State<WorkspaceStream<T>> {
           action: OutlinedButton.icon(
             onPressed: () => setState(() => _stream = widget.create()),
             icon: const Icon(Icons.refresh),
-            label: const Text('Повторить'),
+            label:  Text(tr(context, 'Повторить')),
           ),
         );
       }
@@ -307,17 +308,17 @@ Future<String?> workspaceReason(BuildContext context, String title) async {
             minLines: 2,
             maxLines: 4,
             maxLength: 1000,
-            decoration: const InputDecoration(labelText: 'Причина'),
-            validator: (value) => (value ?? '').trim().isEmpty
+            decoration:  InputDecoration(labelText: trNullable(context, 'Причина')),
+            validator: localizeValidator(context, (value) => (value ?? '').trim().isEmpty
                 ? 'Укажите причину изменения'
-                : null,
+                : null),
           ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child:  Text(tr(context, 'Отмена')),
         ),
         FilledButton(
           onPressed: () {
@@ -325,7 +326,7 @@ Future<String?> workspaceReason(BuildContext context, String title) async {
               Navigator.pop(context, controller.text.trim());
             }
           },
-          child: const Text('Подтвердить'),
+          child:  Text(tr(context, 'Подтвердить')),
         ),
       ],
     ),

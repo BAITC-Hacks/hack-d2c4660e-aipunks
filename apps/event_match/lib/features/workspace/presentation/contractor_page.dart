@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -60,7 +61,7 @@ class _ContractorPageState extends State<ContractorPage> {
           message: 'Проверьте подключение и повторите загрузку.',
           action: OutlinedButton(
             onPressed: _refresh,
-            child: const Text('Повторить'),
+            child:  Text(tr(context, 'Повторить')),
           ),
         );
       }
@@ -195,12 +196,12 @@ class _ContractorPageState extends State<ContractorPage> {
                         OutlinedButton.icon(
                           onPressed: () => context.go('/contractor/profile'),
                           icon: const Icon(Icons.edit_outlined),
-                          label: const Text('Открыть профиль'),
+                          label:  Text(tr(context, 'Открыть профиль')),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => context.go('/contractor/calendar'),
                           icon: const Icon(Icons.calendar_month_outlined),
-                          label: const Text('Подтвердить календарь'),
+                          label:  Text(tr(context, 'Подтвердить календарь')),
                         ),
                       ],
                     ),
@@ -229,7 +230,7 @@ class _ContractorPageState extends State<ContractorPage> {
         ? null
         : OutlinedButton(
             onPressed: () => context.go('/contractor/profile'),
-            child: const Text('Заполнить профиль'),
+            child:  Text(tr(context, 'Заполнить профиль')),
           ),
   );
 
@@ -238,7 +239,7 @@ class _ContractorPageState extends State<ContractorPage> {
     child: TextButton.icon(
       onPressed: _refresh,
       icon: const Icon(Icons.refresh),
-      label: const Text('Обновить статус'),
+      label:  Text(tr(context, 'Обновить статус')),
     ),
   );
 
@@ -457,11 +458,11 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       maxLength: maxLength,
       keyboardType: keyboardType,
       decoration: InputDecoration(
-        labelText: label,
-        helperText: helper,
+        labelText: trNullable(context, label),
+        helperText: trNullable(context, helper),
         helperMaxLines: 3,
       ),
-      validator: validator,
+      validator: localizeValidator(context, validator),
     ),
   );
 
@@ -472,8 +473,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Можно сохранить незаполненный черновик и вернуться к нему позже.',
+           Text(
+            tr(context, 'Можно сохранить незаполненный черновик и вернуться к нему позже.'),
           ),
           const SizedBox(height: 24),
           _field(_name, 'Имя или название компании', maxLength: 120),
@@ -482,7 +483,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             child: DropdownButtonFormField<String>(
               initialValue: _city,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Город'),
+              decoration:  InputDecoration(labelText: trNullable(context, 'Город')),
               items: eventCities
                   .map(
                     (city) => DropdownMenuItem(value: city, child: Text(city)),
@@ -499,13 +500,13 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             'Цена от, ₸',
             maxLength: 12,
             keyboardType: TextInputType.number,
-            validator: (value) {
+            validator: localizeValidator(context, (value) {
               if (value!.trim().isEmpty) return null;
               final amount = int.tryParse(value);
               return amount != null && amount >= 0 && amount <= 1000000000
                   ? null
                   : 'Укажите сумму от 0 до 1 000 000 000 ₸';
-            },
+            }),
           ),
           _choices('Форматы мероприятий', eventFormats, _formats),
           _choices('Языки работы', eventLanguages, _languages),
@@ -515,7 +516,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             maxLength: 6,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             helper: 'Оставьте пустым, если услуга не ограничена часами.',
-            validator: (value) {
+            validator: localizeValidator(context, (value) {
               if (value!.trim().isEmpty) return null;
               final parsed = double.tryParse(value.replaceAll(',', '.'));
               return parsed == null ||
@@ -524,7 +525,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                       parsed > 48
                   ? 'Введите число часов больше 0 и не больше 48'
                   : null;
-            },
+            }),
           ),
           _field(_description, 'Описание услуг', lines: 5, maxLength: 5000),
           _field(
@@ -542,7 +543,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             maxLength: 2500,
             keyboardType: TextInputType.url,
             helper: 'До пяти HTTPS-ссылок, каждая с новой строки.',
-            validator: (value) {
+            validator: localizeValidator(context, (value) {
               final urls = value!
                   .split('\n')
                   .map((s) => s.trim())
@@ -557,7 +558,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                   })
                   ? 'Используйте полные ссылки вида https://example.com'
                   : null;
-            },
+            }),
           ),
           if (_error != null) WorkspaceNotice(_error!, error: true),
           FilledButton.icon(
@@ -640,16 +641,16 @@ class _CalendarEditorState extends State<_CalendarEditor> {
       final discard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Перейти к другому месяцу?'),
-          content: const Text('Изменения занятых дней ещё не сохранены.'),
+          title:  Text(tr(context, 'Перейти к другому месяцу?')),
+          content:  Text(tr(context, 'Изменения занятых дней ещё не сохранены.')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Остаться'),
+              child:  Text(tr(context, 'Остаться')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Перейти без сохранения'),
+              child:  Text(tr(context, 'Перейти без сохранения')),
             ),
           ],
         ),
@@ -729,7 +730,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
               key: ValueKey(_month),
               initialValue: _month,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Месяц'),
+              decoration:  InputDecoration(labelText: trNullable(context, 'Месяц')),
               items:
                   List.generate(
                         13,
@@ -759,8 +760,8 @@ class _CalendarEditorState extends State<_CalendarEditor> {
                 positive: _stored?.isFresh(DateTime.now()) ?? false,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Выбранные дни — заняты. Все остальные — доступны по вашему календарю.',
+               Text(
+                tr(context, 'Выбранные дни — заняты. Все остальные — доступны по вашему календарю.'),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -804,11 +805,11 @@ class _CalendarEditorState extends State<_CalendarEditor> {
                         _error != null && _stored == null
                     ? null
                     : (value) => setState(() => _confirmed = value ?? false),
-                title: const Text(
-                  'Подтверждаю доступность всех неотмеченных дней этого месяца',
+                title:  Text(
+                  tr(context, 'Подтверждаю доступность всех неотмеченных дней этого месяца'),
                 ),
-                subtitle: const Text(
-                  'Это информация для подбора, без обещания бронирования.',
+                subtitle:  Text(
+                  tr(context, 'Это информация для подбора, без обещания бронирования.'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -828,7 +829,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
               if (!_dirty)
                 OutlinedButton(
                   onPressed: _load,
-                  child: const Text('Повторить загрузку'),
+                  child:  Text(tr(context, 'Повторить загрузку')),
                 ),
             ],
           ],

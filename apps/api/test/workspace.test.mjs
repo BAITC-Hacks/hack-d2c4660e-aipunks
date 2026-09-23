@@ -71,3 +71,18 @@ test('two-sided messaging is private, idempotent and unavailable to demo profile
   s.call('admin','setAccountStatus',{uid:contractor,suspended:true,reason:'Приостановлен'});
   denied(()=>m('contractor','read',{threadId:thread.id}),403);denied(()=>m('client','send',{threadId:thread.id,text:'hi',nonce:'blocked'}),403);
 });
+
+test('registration stores account type across login and rejects privileged roles',async t=>{
+  const db=openDatabase(':memory:');t.after(()=>db.close());const api=createWorkspace(db);
+  for(const accountType of ['client','contractor']) {
+    const input={op:'register',email:`${accountType}@type.test`,password:'testing-password-456',name:'Test',accountType};
+    const registered=await api.auth(input);
+    assert.equal(registered.identity.accountType,accountType);
+    assert.equal(api.rpc({op:'account'},registered.token).accountType,accountType);
+    await api.auth({op:'logout'},registered.token);
+    const logged=await api.auth({...input,op:'login'});
+    assert.equal(logged.identity.accountType,accountType);
+    denied(()=>api.rpc({op:'listAccounts'},logged.token),403);
+  }
+  await assert.rejects(api.auth({op:'register',email:'admin@type.test',password:'testing-password-456',name:'Test',accountType:'admin'}),e=>e.status===400);
+});

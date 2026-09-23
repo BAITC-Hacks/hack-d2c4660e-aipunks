@@ -8,6 +8,7 @@ import 'package:event_match/features/workspace/domain/workspace_repository.dart'
 class FakeAuthGateway implements AuthGateway {
   final changes = StreamController<AuthIdentity?>.broadcast();
   AuthIdentity? identity;
+  String? registeredType;
   bool resetRequested = false;
   bool verificationSent = false;
   @override
@@ -42,7 +43,15 @@ class FakeAuthGateway implements AuthGateway {
   @override
   Future<void> signIn(String email, String password) async {}
   @override
-  Future<void> register(String email, String password, String name) async {}
+  Future<void> register(
+    String email,
+    String password,
+    String name, {
+    String accountType = 'client',
+  }) async {
+    registeredType = accountType;
+  }
+
   @override
   Future<void> signInWithGoogle() async {}
 }
@@ -57,12 +66,18 @@ class SessionRepository extends WorkspaceRepository {
   Completer<void>? pendingEnsure;
   int staffReads = 0;
   @override
-  Future<void> ensureAccount(String uid, String name, String email) async {
+  Future<void> ensureAccount(
+    String uid,
+    String name,
+    String email, {
+    String accountType = 'client',
+  }) async {
     ensures.add(uid);
     await pendingEnsure?.future;
     accounts.putIfAbsent(
       uid,
-      () => Account(uid: uid, name: name, email: email),
+      () =>
+          Account(uid: uid, name: name, email: email, accountType: accountType),
     );
   }
 
@@ -118,6 +133,46 @@ void main() {
     await repo.roleChanges.close();
   });
 
+  test(
+    'contractor registration persists preferred cabinet without staff access',
+    () async {
+      auth.emit(
+        const AuthIdentity(
+          uid: 'maker',
+          email: 'maker@example.com',
+          name: 'Maker',
+          emailVerified: true,
+          accountType: 'contractor',
+        ),
+      );
+      await flush();
+      expect(repo.accounts['maker']!.accountType, 'contractor');
+      expect(
+        sessionRedirect(session, Uri.parse('/auth')),
+        '/contractor/overview',
+      );
+      expect(
+        sessionRedirect(session, Uri.parse('/auth?returnTo=%2Fsettings')),
+        '/settings',
+      );
+      expect(session.isStaff, isFalse);
+      await auth.signOut();
+      await flush();
+      auth.emit(
+        const AuthIdentity(
+          uid: 'maker',
+          email: 'maker@example.com',
+          name: 'Maker',
+          emailVerified: true,
+        ),
+      );
+      await flush();
+      expect(
+        sessionRedirect(session, Uri.parse('/auth')),
+        '/contractor/overview',
+      );
+    },
+  );
   test(
     'guest never creates account; protected destination is retained',
     () async {

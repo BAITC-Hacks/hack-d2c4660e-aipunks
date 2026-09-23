@@ -39,7 +39,7 @@ export function createWorkspace(db) {
   const account=uid=>get('account',uid);
   const role=uid=>get('staff',uid)?.role??'none';
   const hide=(uid,actor,reason)=>{const p=get('published',uid);if(p?.published){p.published=false;p.revision++;p.updatedAt=now();put('published',uid,uid,p);audit(actor,'publication',uid,p.revision,'unpublished',reason);}};
-  const identity=uid=>{const a=account(uid);return {uid,email:a.email,name:a.name,emailVerified:false};};
+  const identity=uid=>{const a=account(uid);return {uid,email:a.email,name:a.name,emailVerified:false,accountType:a.accountType??'client'};};
   const requireSession=token=>{
     if(typeof token!=='string'||token.length>256)fail(401,'Войдите в аккаунт.');
     const row=db.prepare('SELECT uid FROM sessions WHERE token_hash=? AND expires>?').get(hash(token),Date.now());
@@ -56,10 +56,11 @@ export function createWorkspace(db) {
       const old=db.prepare('SELECT * FROM users WHERE email=?').get(email);
       if(body.op==='register') {
         const name=parse(short,body.name);
+        const accountType=parse(z.enum(['client','contractor']).default('client'),body.accountType);
         if(old)fail(409,'Этот адрес уже зарегистрирован.');
         const uid=randomUUID(),salt=randomBytes(16).toString('hex');
         const digest=(await scrypt(password,salt,64)).toString('hex');
-        tx(()=>{db.prepare('INSERT INTO users VALUES(?,?,?,?)').run(uid,email,salt,digest);put('account',uid,uid,{uid,name,email,status:'active',deletionRequested:false,revision:1});});
+        tx(()=>{db.prepare('INSERT INTO users VALUES(?,?,?,?)').run(uid,email,salt,digest);put('account',uid,uid,{uid,name,email,accountType,status:'active',deletionRequested:false,revision:1});});
         return issue(uid);
       }
       // Constant-cost check also for unknown emails; no user enumeration on login.

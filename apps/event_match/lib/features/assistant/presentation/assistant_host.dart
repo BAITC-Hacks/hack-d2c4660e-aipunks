@@ -22,6 +22,7 @@ class AssistantHost extends StatefulWidget {
     this.session,
     this.onOpenCatalog,
     this.showHeading = true,
+    this.resultsOnPage = false,
   });
   final CatalogRepository repository;
   final MatchRequest? initialRequest;
@@ -29,6 +30,7 @@ class AssistantHost extends StatefulWidget {
   final AssistantSession? session;
   final VoidCallback? onOpenCatalog;
   final bool showHeading;
+  final bool resultsOnPage;
   @override
   State<AssistantHost> createState() => _AssistantHostState();
 }
@@ -70,6 +72,7 @@ class _AssistantHostState extends State<AssistantHost> {
     controller: session.controller,
     onOpenCatalog: widget.onOpenCatalog,
     showHeading: widget.showHeading,
+    resultsOnPage: widget.resultsOnPage,
   );
 }
 

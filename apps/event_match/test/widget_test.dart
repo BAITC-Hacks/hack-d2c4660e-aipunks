@@ -41,9 +41,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('apply-filters')));
       await tester.pumpAndSettle();
-      expect(find.text('Ваша подборка'), findsOneWidget);
+      expect(find.byKey(const Key('selection-title')), findsOneWidget);
       for (var rank = 1; rank <= 3; rank++) {
-        expect(find.text('Рекомендация №$rank · Алматы'), findsOneWidget);
+        expect(find.text('Вариант $rank'), findsOneWidget);
       }
       expect(find.byKey(const Key('budget-input')), findsNothing);
       expect(tester.takeException(), isNull);
@@ -68,7 +68,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('apply-filters')));
     await tester.pumpAndSettle();
-    expect(find.text('Ваша подборка'), findsOneWidget);
+    expect(find.byKey(const Key('selection-title')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   testWidgets(
@@ -92,8 +92,10 @@ void main() {
       expect(find.text('Введите целое число больше нуля'), findsOneWidget);
       await tester.tap(find.byTooltip('Закрыть без изменений'));
       await tester.pumpAndSettle();
-      expect(find.text('Ваша подборка'), findsOneWidget);
+      expect(find.byKey(const Key('selection-title')), findsOneWidget);
       expect(find.text('до 1 000 000 ₸'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('reset-filters')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('reset-filters')));
       await tester.pumpAndSettle();
       expect(find.text('Каталог · 500 профилей'), findsOneWidget);
@@ -147,7 +149,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(suggestion);
       await tester.pumpAndSettle();
-      expect(find.text('Ваша подборка'), findsOneWidget);
+      expect(find.byKey(const Key('selection-title')), findsOneWidget);
       expect(find.text('до 1 ₸'), findsNothing);
       expect(tester.takeException(), isNull);
     },

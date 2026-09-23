@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../../../app/design_tokens.dart';
 import '../../domain/models.dart';
@@ -93,16 +94,23 @@ class _OrderFiltersState extends State<OrderFilters> {
     List<String> values,
     ValueChanged<String> update, {
     Key? key,
+    bool capitalize = false,
   }) => DropdownButtonFormField<String>(
     key: key,
     initialValue: value,
     isExpanded: true,
     itemHeight: null,
     borderRadius: BorderRadius.circular(16),
-    decoration: InputDecoration(labelText: label),
+    decoration: InputDecoration(labelText: trNullable(context, label)),
     icon: const Icon(Icons.keyboard_arrow_down_rounded),
     selectedItemBuilder: (_) => values
-        .map((v) => Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))
+        .map(
+          (v) => Text(
+            capitalize ? v[0].toUpperCase() + v.substring(1) : v,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        )
         .toList(),
     items: values
         .map(
@@ -110,7 +118,7 @@ class _OrderFiltersState extends State<OrderFilters> {
             value: v,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(v),
+              child: Text(capitalize ? v[0].toUpperCase() + v.substring(1) : v),
             ),
           ),
         )
@@ -164,6 +172,7 @@ class _OrderFiltersState extends State<OrderFilters> {
           ],
           (v) => format = v,
           key: const Key('format-select'),
+          capitalize: true,
         ),
         OutlinedButton.icon(
           key: const Key('date-input'),
@@ -190,19 +199,19 @@ class _OrderFiltersState extends State<OrderFilters> {
           key: const Key('budget-input'),
           controller: budget,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Бюджет, ₸',
-            helperText: 'На одного подрядчика',
+          decoration:  InputDecoration(
+            labelText: trNullable(context, 'Бюджет, ₸'),
+            helperText: trNullable(context, 'На одного подрядчика'),
             errorMaxLines: 3,
           ),
-          validator: (v) {
+          validator: localizeValidator(context, (v) {
             final value = int.tryParse(v?.trim() ?? '') ?? 0;
             if (value <= 0) return 'Введите целое число больше нуля';
             if (widget.datePolicy.isLive && value > 1000000000) {
               return 'Максимальный бюджет — 1 000 000 000 ₸';
             }
             return null;
-          },
+          }),
         ),
         select(
           'Язык',
@@ -215,12 +224,12 @@ class _OrderFiltersState extends State<OrderFilters> {
           key: const Key('hours-input'),
           controller: hours,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Длительность, ч',
-            helperText: 'Необязательно',
+          decoration:  InputDecoration(
+            labelText: trNullable(context, 'Длительность, ч'),
+            helperText: trNullable(context, 'Необязательно'),
             errorMaxLines: 3,
           ),
-          validator: (v) {
+          validator: localizeValidator(context, (v) {
             if (v == null || v.trim().isEmpty) return null;
             final n = double.tryParse(v.trim().replaceAll(',', '.'));
             if (widget.datePolicy.isLive && n != null && n > 48) {
@@ -229,7 +238,7 @@ class _OrderFiltersState extends State<OrderFilters> {
             return n != null && n.isFinite && n > 0
                 ? null
                 : 'Введите число больше нуля';
-          },
+          }),
         ),
       ];
       return Column(
@@ -240,8 +249,8 @@ class _OrderFiltersState extends State<OrderFilters> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Уточните условия — подберём до трёх подрядчиков. Изменения применяются только по кнопке.',
+           Text(
+            tr(context, 'Уточните условия — подберём до трёх подрядчиков. Изменения применяются только по кнопке.'),
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -253,11 +262,30 @@ class _OrderFiltersState extends State<OrderFilters> {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            widget.datePolicy.isLive
-                ? 'Даты на ближайшие 365 дней. Доступность не означает бронирование.'
-                : 'Доступны даты с 23 сентября по 31 декабря 2026 года.',
-            style: Theme.of(context).textTheme.bodySmall,
+          Flex(
+            direction: columns > 1 ? Axis.horizontal : Axis.vertical,
+            crossAxisAlignment: columns > 1
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                fit: columns > 1 ? FlexFit.tight : FlexFit.loose,
+                child: Text(
+                  widget.datePolicy.isLive
+                      ? 'Даты на ближайшие 365 дней. Доступность не означает бронирование.'
+                      : 'Доступны даты с 23 сентября по 31 декабря 2026 года.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (widget.embedded) ...[
+                SizedBox(
+                  width: columns > 1 ? 20 : 0,
+                  height: columns > 1 ? 0 : 12,
+                ),
+                actions(),
+              ],
+            ],
           ),
         ],
       );
@@ -269,16 +297,11 @@ class _OrderFiltersState extends State<OrderFilters> {
     spacing: 12,
     runSpacing: 12,
     children: [
-      TextButton(
-        key: const Key('cancel-filters'),
-        onPressed: cancel,
-        child: const Text('Отмена'),
-      ),
       FilledButton.icon(
         key: const Key('apply-filters'),
         onPressed: apply,
         icon: const Icon(Icons.check, size: 18),
-        label: const Text('Применить и подобрать'),
+        label:  Text(tr(context, 'Применить и подобрать')),
       ),
     ],
   );
@@ -288,16 +311,10 @@ class _OrderFiltersState extends State<OrderFilters> {
     final content = Form(key: form, child: fields());
     if (widget.embedded) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Divider(),
-            const SizedBox(height: 20),
-            content,
-            const SizedBox(height: 24),
-            actions(),
-          ],
+          children: [const Divider(), const SizedBox(height: 20), content],
         ),
       );
     }
@@ -318,7 +335,7 @@ class _OrderFiltersState extends State<OrderFilters> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Закрыть без изменений',
+                  tooltip: trNullable(context, 'Закрыть без изменений'),
                   onPressed: cancel,
                   icon: const Icon(Icons.close),
                 ),

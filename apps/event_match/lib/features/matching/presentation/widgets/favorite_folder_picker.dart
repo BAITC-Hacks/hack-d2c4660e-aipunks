@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../domain/favorites.dart';
 import '../../domain/models.dart';
@@ -73,9 +74,16 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
       return PopScope(
         canPop: !busy,
         child: AlertDialog(
-          title: const Text('Сохранить в избранное'),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(28, 28, 28, 20),
+          contentPadding: const EdgeInsets.fromLTRB(28, 0, 28, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          title:  Text(tr(context, 'Сохранить в избранное')),
           content: SizedBox(
-            width: 440,
+            width: 480,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,8 +94,8 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Выберите папку или создайте новую. Папки сохраняются на этом устройстве.',
+                   Text(
+                    tr(context, 'Выберите папку или создайте новую. Папки сохраняются на этом устройстве.'),
                   ),
                   if (controller.loading)
                     const Padding(
@@ -99,10 +107,10 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     Text(controller.loadError!),
                     TextButton(
                       onPressed: controller.load,
-                      child: const Text('Повторить загрузку'),
+                      child:  Text(tr(context, 'Повторить загрузку')),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   for (final folder in folders) ...[
                     Builder(
                       builder: (context) {
@@ -110,8 +118,12 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                           (e) => e.contractorId == widget.contractor.id,
                         );
                         return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
+                          margin: const EdgeInsets.only(bottom: 12),
                           child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
                             key: ValueKey('save-folder-${folder.id}'),
                             leading: Icon(
                               saved ? Icons.favorite : Icons.folder_outlined,
@@ -142,7 +154,7 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                       },
                     ),
                   ],
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 20),
                   TextField(
                     key: const Key('favorite-folder-name'),
                     controller: name,
@@ -151,9 +163,9 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     maxLines: 3,
                     textInputAction: TextInputAction.done,
                     enabled: !disabled,
-                    decoration: const InputDecoration(
-                      labelText: 'Новая папка',
-                      helperText: 'Название можно изменить',
+                    decoration:  InputDecoration(
+                      labelText: trNullable(context, 'Новая папка'),
+                      helperText: trNullable(context, 'Название можно изменить'),
                       helperMaxLines: 3,
                     ),
                     onSubmitted: disabled
@@ -166,6 +178,7 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                             ),
                           ),
                   ),
+                  const SizedBox(height: 20),
                   if (error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -178,6 +191,9 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
                     ),
                   FilledButton.icon(
                     key: const Key('create-favorite-folder'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                    ),
                     onPressed: disabled
                         ? null
                         : () => save(
@@ -197,7 +213,7 @@ class _FavoriteFolderPickerState extends State<FavoriteFolderPicker> {
           actions: [
             TextButton(
               onPressed: busy ? null : () => Navigator.pop(context),
-              child: const Text('Закрыть'),
+              child:  Text(tr(context, 'Закрыть')),
             ),
           ],
         ),

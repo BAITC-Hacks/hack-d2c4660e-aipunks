@@ -5,7 +5,9 @@ class AuthIdentity {
     required this.email,
     required this.name,
     required this.emailVerified,
+    this.accountType = 'client',
   });
+  final String accountType;
   final String uid;
   final String email;
   final String name;
@@ -16,7 +18,12 @@ abstract interface class AuthGateway {
   Stream<AuthIdentity?> get identities;
   AuthIdentity? get currentIdentity;
   Future<void> signIn(String email, String password);
-  Future<void> register(String email, String password, String name);
+  Future<void> register(
+    String email,
+    String password,
+    String name, {
+    String accountType = 'client',
+  });
   Future<void> signInWithGoogle();
   Future<void> sendVerification();
   Future<void> reload();

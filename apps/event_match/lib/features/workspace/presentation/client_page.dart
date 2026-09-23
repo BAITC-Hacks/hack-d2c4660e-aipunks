@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../matching/domain/models.dart';
 import '../../matching/presentation/widgets/contractor_card.dart';
@@ -152,7 +153,7 @@ class _ClientPageState extends State<ClientPage> {
     final save = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Результат подбора'),
+        title:  Text(tr(context, 'Результат подбора')),
         content: SingleChildScrollView(
           child: SizedBox(
             width: 700,
@@ -177,7 +178,7 @@ class _ClientPageState extends State<ClientPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Закрыть'),
+            child:  Text(tr(context, 'Закрыть')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
@@ -206,16 +207,16 @@ class _ClientPageState extends State<ClientPage> {
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Удалить?'),
+          title:  Text(tr(context, 'Удалить?')),
           content: Text(name),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Отмена'),
+              child:  Text(tr(context, 'Отмена')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Удалить'),
+              child:  Text(tr(context, 'Удалить')),
             ),
           ],
         ),
@@ -421,14 +422,14 @@ class _ClientPageState extends State<ClientPage> {
           ),
           const SizedBox(height: 16),
           if (s.entries.isEmpty)
-            const Text('В сохранённом результате нет подходящих кандидатов.'),
+             Text(tr(context, 'В сохранённом результате нет подходящих кандидатов.')),
           for (final r in s.entries)
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
               title: Text(
                 '${r.contractor.name} · от ${money(r.contractor.price)} ₸',
               ),
-              subtitle: const Text('Данные на момент сохранения'),
+              subtitle:  Text(tr(context, 'Данные на момент сохранения')),
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -465,7 +466,7 @@ class _ClientPageState extends State<ClientPage> {
                         c.name,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const Text('Карточка больше не опубликована.'),
+                       Text(tr(context, 'Карточка больше не опубликована.')),
                       const SizedBox(height: 12),
                       WorkspaceAction(
                         label: 'Убрать из избранного',
@@ -512,7 +513,7 @@ class _ClientPageState extends State<ClientPage> {
               'Проверьте соединение и повторите. Ваши сохранённые данные не потеряны.',
           action: OutlinedButton(
             onPressed: reload,
-            child: const Text('Повторить'),
+            child:  Text(tr(context, 'Повторить')),
           ),
         );
       }
@@ -526,7 +527,7 @@ class _ClientPageState extends State<ClientPage> {
             alignment: Alignment.centerRight,
             child: IconButton(
               onPressed: reload,
-              tooltip: 'Обновить данные',
+              tooltip: trNullable(context, 'Обновить данные'),
               icon: const Icon(Icons.refresh),
             ),
           ),
@@ -580,15 +581,15 @@ class _EventEditorState extends State<EventEditor> {
               TextFormField(
                 controller: name,
                 maxLength: 120,
-                decoration: const InputDecoration(labelText: 'Название'),
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Укажите название' : null,
+                decoration:  InputDecoration(labelText: trNullable(context, 'Название')),
+                validator: localizeValidator(context, (v) =>
+                    (v ?? '').trim().isEmpty ? 'Укажите название' : null),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: city,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Город'),
+                decoration:  InputDecoration(labelText: trNullable(context, 'Город')),
                 items: [
                   for (final c in eventCities)
                     DropdownMenuItem(value: c, child: Text(c)),
@@ -599,7 +600,7 @@ class _EventEditorState extends State<EventEditor> {
               DropdownButtonFormField<String>(
                 initialValue: format,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Формат'),
+                decoration:  InputDecoration(labelText: trNullable(context, 'Формат')),
                 items: [
                   for (final f in eventFormats)
                     DropdownMenuItem(value: f, child: Text(f)),
@@ -625,14 +626,14 @@ class _EventEditorState extends State<EventEditor> {
               ),
               const SizedBox(height: 16),
               if (!MatchDatePolicy.live().contains(date))
-                const Text('Выберите дату в ближайшие 365 дней.'),
+                 Text(tr(context, 'Выберите дату в ближайшие 365 дней.')),
               TextFormField(
                 controller: preferences,
                 minLines: 3,
                 maxLines: 5,
                 maxLength: 1000,
-                decoration: const InputDecoration(
-                  labelText: 'Что важно для события?',
+                decoration:  InputDecoration(
+                  labelText: trNullable(context, 'Что важно для события?'),
                 ),
               ),
             ],
@@ -643,7 +644,7 @@ class _EventEditorState extends State<EventEditor> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
+        child:  Text(tr(context, 'Отмена')),
       ),
       FilledButton(
         onPressed: () {
@@ -663,7 +664,7 @@ class _EventEditorState extends State<EventEditor> {
             ),
           );
         },
-        child: const Text('Сохранить'),
+        child:  Text(tr(context, 'Сохранить')),
       ),
     ],
   );

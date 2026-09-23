@@ -13,6 +13,38 @@ import 'package:event_match/features/auth/presentation/session_controller.dart';
 import 'auth_session_test.dart' show FakeAuthGateway, SessionRepository, alice;
 
 void main() {
+  testWidgets('registration submits selected account type on a small phone', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 812);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final auth = FakeAuthGateway();
+    addTearDown(auth.changes.close);
+    await tester.pumpWidget(MaterialApp(home: AuthPage(auth: auth)));
+    await tester.tap(find.text('Нет аккаунта? Создать'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('account-type-contractor')));
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Как вас зовут'),
+      'Анна',
+    );
+    await tester.enterText(
+      find.byKey(const Key('auth-email')),
+      'anna@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('auth-password')),
+      'password123',
+    );
+    await tester.ensureVisible(find.byKey(const Key('auth-submit')));
+    await tester.tap(find.byKey(const Key('auth-submit')));
+    await tester.pumpAndSettle();
+    expect(auth.registeredType, 'contractor');
+    expect(tester.takeException(), isNull);
+  });
+
   test(
     'emulator options use a separate demo project and dummy credentials',
     () {

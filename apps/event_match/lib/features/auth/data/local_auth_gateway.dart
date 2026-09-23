@@ -23,6 +23,7 @@ class LocalAuthGateway implements AuthGateway {
             email: data['email'] as String,
             name: data['name'] as String,
             emailVerified: data['emailVerified'] == true,
+            accountType: data['accountType'] as String? ?? 'client',
           );
     _events.add(_identity);
   }
@@ -41,8 +42,14 @@ class LocalAuthGateway implements AuthGateway {
   Future<void> signIn(String email, String password) =>
       _login({'op': 'login', 'email': email, 'password': password});
   @override
-  Future<void> register(String email, String password, String name) => _login({
+  Future<void> register(
+    String email,
+    String password,
+    String name, {
+    String accountType = 'client',
+  }) => _login({
     'op': 'register',
+    'accountType': accountType,
     'email': email,
     'password': password,
     'name': name,

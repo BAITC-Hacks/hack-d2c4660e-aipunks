@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -149,18 +150,18 @@ class _EventPlanPageState extends State<EventPlanPage> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Есть несохранённые изменения'),
-            content: const Text(
-              'При загрузке другого плана или обновлении они будут потеряны.',
+            title:  Text(tr(context, 'Есть несохранённые изменения')),
+            content:  Text(
+              tr(context, 'При загрузке другого плана или обновлении они будут потеряны.'),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Продолжить редактирование'),
+                child:  Text(tr(context, 'Продолжить редактирование')),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Загрузить без сохранения'),
+                child:  Text(tr(context, 'Загрузить без сохранения')),
               ),
             ],
           ),
@@ -234,10 +235,10 @@ class _EventPlanPageState extends State<EventPlanPage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Padding(
+      return  Padding(
         padding: EdgeInsets.all(32),
         child: Center(
-          child: CircularProgressIndicator(semanticsLabel: 'Загрузка плана'),
+          child: CircularProgressIndicator(semanticsLabel: trNullable(context, 'Загрузка плана')),
         ),
       );
     }
@@ -255,7 +256,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
             child: OutlinedButton.icon(
               onPressed: _locked ? null : _reload,
               icon: const Icon(Icons.refresh),
-              label: const Text('Повторить загрузку'),
+              label:  Text(tr(context, 'Повторить загрузку')),
             ),
           ),
           const SizedBox(height: 16),
@@ -272,7 +273,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
                 : FilledButton.icon(
                     onPressed: widget.onOpenEvents,
                     icon: const Icon(Icons.event_outlined),
-                    label: const Text('Мои мероприятия'),
+                    label:  Text(tr(context, 'Мои мероприятия')),
                   ),
           ),
         if (_event != null && _plan != null) _planner(),
@@ -305,7 +306,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
                   key: ValueKey('plan-event-${event.id}-$_eventPickerVersion'),
                   initialValue: event.id,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Мероприятие'),
+                  decoration:  InputDecoration(labelText: trNullable(context, 'Мероприятие')),
                   items: [
                     for (final item in _events)
                       DropdownMenuItem(
@@ -355,7 +356,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
                     OutlinedButton.icon(
                       onPressed: _locked ? null : _reload,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Обновить данные'),
+                      label:  Text(tr(context, 'Обновить данные')),
                     ),
                     Text(
                       _dirty
@@ -380,7 +381,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
                   ? null
                   : OutlinedButton(
                       onPressed: widget.onOpenEvents,
-                      child: const Text('Мои мероприятия'),
+                      child:  Text(tr(context, 'Мои мероприятия')),
                     ),
             ),
           for (final group in review.groups) _comparison(group),
@@ -394,16 +395,16 @@ class _EventPlanPageState extends State<EventPlanPage> {
               minLines: 3,
               maxLines: 6,
               maxLength: 2000,
-              decoration: const InputDecoration(
-                labelText: 'Заметки к плану',
+              decoration:  InputDecoration(
+                labelText: trNullable(context, 'Заметки к плану'),
                 helperText:
-                    'Личные заметки. Они не добавляются в запрос подрядчику.',
+                    trNullable(context, 'Личные заметки. Они не добавляются в запрос подрядчику.'),
                 helperMaxLines: 3,
                 errorMaxLines: 3,
               ),
-              validator: (value) => (value?.length ?? 0) > 2000
+              validator: localizeValidator(context, (value) => (value?.length ?? 0) > 2000
                   ? 'Заметка слишком длинная. Сократите текст перед сохранением.'
-                  : null,
+                  : null),
               autovalidateMode: AutovalidateMode.onUserInteraction,
               onChanged: (value) => _edit(
                 _plan!.copyWith(
@@ -447,8 +448,8 @@ class _EventPlanPageState extends State<EventPlanPage> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Это ориентир по выбранным услугам. Итоговую стоимость, состав пакета и дату нужно подтвердить у подрядчиков.',
+         Text(
+          tr(context, 'Это ориентир по выбранным услугам. Итоговую стоимость, состав пакета и дату нужно подтвердить у подрядчиков.'),
         ),
         const SizedBox(height: 20),
         TextFormField(
@@ -457,14 +458,14 @@ class _EventPlanPageState extends State<EventPlanPage> {
           enabled: !_locked,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
-            labelText: 'Общий бюджет, ₸',
+          decoration:  InputDecoration(
+            labelText: trNullable(context, 'Общий бюджет, ₸'),
             helperText:
-                'Необязательно. Это общий ориентир, отдельный от бюджета категории.',
+                trNullable(context, 'Необязательно. Это общий ориентир, отдельный от бюджета категории.'),
             helperMaxLines: 3,
             errorMaxLines: 3,
           ),
-          validator: _validateBudget,
+          validator: localizeValidator(context, _validateBudget),
           autovalidateMode: AutovalidateMode.onUserInteraction,
           onChanged: (value) => _edit(
             _plan!.copyWith(
@@ -483,8 +484,8 @@ class _EventPlanPageState extends State<EventPlanPage> {
           ),
         ] else if (_plan!.totalBudgetKzt != null) ...[
           const SizedBox(height: 12),
-          const Text(
-            'Остаток не рассчитан: сначала выберите подрядчиков и уточните все проблемные позиции.',
+           Text(
+            tr(context, 'Остаток не рассчитан: сначала выберите подрядчиков и уточните все проблемные позиции.'),
           ),
         ],
       ],
@@ -542,8 +543,8 @@ class _EventPlanPageState extends State<EventPlanPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (candidate.isSelected) ...[
-            const Text(
-              'Выбран в план',
+             Text(
+              tr(context, 'Выбран в план'),
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
@@ -575,8 +576,8 @@ class _EventPlanPageState extends State<EventPlanPage> {
             'Календарь подтверждён: ${workspaceDate(calendar?.confirmedAt)}',
           ),
           if (candidate.canChoose)
-            const Text(
-              'Дата доступна по подтверждённому календарю. Это не бронь.',
+             Text(
+              tr(context, 'Дата доступна по подтверждённому календарю. Это не бронь.'),
             ),
           for (final warning in [
             ...candidate.blockers,
@@ -585,14 +586,14 @@ class _EventPlanPageState extends State<EventPlanPage> {
           const SizedBox(height: 12),
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: const Text('Подробности и объяснение'),
+            title:  Text(tr(context, 'Подробности и объяснение')),
             childrenPadding: const EdgeInsets.only(bottom: 16),
             expandedCrossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(provider.description),
               const SizedBox(height: 12),
-              const Text(
-                'Объяснение из сохранённой подборки:',
+               Text(
+                tr(context, 'Объяснение из сохранённой подборки:'),
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
               Text(candidate.recommendation.explanation),
@@ -639,7 +640,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
                 ? null
                 : () => _showBrief(candidate),
             icon: const Icon(Icons.description_outlined),
-            label: const Text('Черновик запроса'),
+            label:  Text(tr(context, 'Черновик запроса')),
           ),
         ],
       ),
@@ -670,8 +671,8 @@ class _EventPlanPageState extends State<EventPlanPage> {
                 'Выбранный кандидат больше не доступен в подборке',
           ),
           if (review.unresolvedCategories.contains(entry.key))
-            const Text(
-              'Выбор требует уточнения и не включён в оценку бюджета.',
+             Text(
+              tr(context, 'Выбор требует уточнения и не включён в оценку бюджета.'),
             ),
           Align(
             alignment: Alignment.centerLeft,
@@ -679,7 +680,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
               key: ValueKey('clear-${entry.key}'),
               onPressed: _locked ? null : () => _edit(_plan!.remove(entry.key)),
               icon: const Icon(Icons.close),
-              label: const Text('Убрать из плана'),
+              label:  Text(tr(context, 'Убрать из плана')),
             ),
           ),
           const SizedBox(height: 12),
@@ -697,8 +698,8 @@ class _EventPlanPageState extends State<EventPlanPage> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Отмечайте после личного обсуждения. Эти отметки не подтверждают бронирование.',
+         Text(
+          tr(context, 'Отмечайте после личного обсуждения. Эти отметки не подтверждают бронирование.'),
         ),
         const SizedBox(height: 12),
         for (final task in planningTasks.entries)
@@ -774,7 +775,7 @@ class _BriefDialogState extends State<_BriefDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Черновик запроса подрядчику'),
+    title:  Text(tr(context, 'Черновик запроса подрядчику')),
     content: SizedBox(
       width: 620,
       child: SingleChildScrollView(
@@ -782,8 +783,8 @@ class _BriefDialogState extends State<_BriefDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'При необходимости измените текст. Вы сами выбираете способ связи и отправляете запрос подрядчику.',
+             Text(
+              tr(context, 'При необходимости измените текст. Вы сами выбираете способ связи и отправляете запрос подрядчику.'),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -792,7 +793,7 @@ class _BriefDialogState extends State<_BriefDialog> {
               minLines: 8,
               maxLines: null,
               enabled: !_copying,
-              decoration: const InputDecoration(labelText: 'Текст запроса'),
+              decoration:  InputDecoration(labelText: trNullable(context, 'Текст запроса')),
               onChanged: (_) => setState(() {}),
             ),
           ],
@@ -802,12 +803,12 @@ class _BriefDialogState extends State<_BriefDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Закрыть'),
+        child:  Text(tr(context, 'Закрыть')),
       ),
       FilledButton.icon(
         onPressed: _copying || _text.text.trim().isEmpty ? null : _copy,
         icon: const Icon(Icons.copy_outlined),
-        label: const Text('Скопировать текст'),
+        label:  Text(tr(context, 'Скопировать текст')),
       ),
     ],
   );

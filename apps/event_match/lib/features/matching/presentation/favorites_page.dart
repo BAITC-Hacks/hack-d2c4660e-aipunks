@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../domain/favorites.dart';
 import '../domain/matching_engine.dart';
@@ -14,7 +15,7 @@ Future<MatchRequest?> showFavoritesPanel(
   required bool catalogAvailable,
 }) => showSidePanel<MatchRequest>(
   context,
-  barrierLabel: 'Закрыть избранное',
+  barrierLabel: trNullable(context, 'Закрыть избранное'),
   builder: (_) => ScaffoldMessenger(
     child: FavoritesPage(
       controller: controller,
@@ -80,12 +81,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text('Избранное'),
+        title:  Text(tr(context, 'Избранное')),
         actions: [
           IconButton(
             autofocus: true,
             focusNode: closeFocus,
-            tooltip: 'Закрыть избранное',
+            tooltip: trNullable(context, 'Закрыть избранное'),
             onPressed: close,
             icon: const Icon(Icons.close),
           ),
@@ -111,15 +112,15 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Ведущие, фотографы и площадки — в одной папке. Сохранено на этом устройстве.',
+                     Text(
+                      tr(context, 'Ведущие, фотографы и площадки — в одной папке. Сохранено на этом устройстве.'),
                     ),
                     const SizedBox(height: 24),
                     if (controller.loadError != null) ...[
                       Text(controller.loadError!),
                       TextButton(
                         onPressed: controller.load,
-                        child: const Text('Повторить загрузку'),
+                        child:  Text(tr(context, 'Повторить загрузку')),
                       ),
                     ] else if (controller.folders.isEmpty)
                       const Padding(
@@ -213,7 +214,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                                   ),
                                 ],
                                 const SizedBox(height: 12),
-                                const Text('Открыть папку →'),
+                                 Text(tr(context, 'Открыть папку →')),
                               ],
                             ),
                           ),
@@ -271,23 +272,23 @@ class FavoriteFolderPage extends StatelessWidget {
     final value = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Название папки'),
+        title:  Text(tr(context, 'Название папки')),
         content: TextFormField(
           initialValue: name,
           onChanged: (value) => name = value,
           autofocus: true,
           maxLength: 80,
-          decoration: const InputDecoration(labelText: 'Название'),
+          decoration:  InputDecoration(labelText: trNullable(context, 'Название')),
           onFieldSubmitted: (value) => Navigator.pop(context, value),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Отмена'),
+            child:  Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, name),
-            child: const Text('Сохранить'),
+            child:  Text(tr(context, 'Сохранить')),
           ),
         ],
       ),
@@ -301,18 +302,18 @@ class FavoriteFolderPage extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Удалить папку?'),
+        title:  Text(tr(context, 'Удалить папку?')),
         content: Text(
           '«${folder.name}» и сохранённые в ней ссылки будут удалены с этого устройства.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Отмена'),
+            child:  Text(tr(context, 'Отмена')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Удалить'),
+            child:  Text(tr(context, 'Удалить')),
           ),
         ],
       ),
@@ -359,15 +360,15 @@ class FavoriteFolderPage extends StatelessWidget {
       return Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            tooltip: 'К папкам избранного',
+            tooltip: trNullable(context, 'К папкам избранного'),
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back),
           ),
-          title: const Text('Папка избранного'),
+          title:  Text(tr(context, 'Папка избранного')),
           actions: [
             if (folder != null)
               PopupMenuButton<String>(
-                tooltip: 'Действия с папкой',
+                tooltip: trNullable(context, 'Действия с папкой'),
                 enabled: !controller.saving,
                 onSelected: (value) => value == 'rename'
                     ? rename(context, folder)
@@ -380,7 +381,7 @@ class FavoriteFolderPage extends StatelessWidget {
             IconButton(
               autofocus: true,
               focusNode: closeFocus,
-              tooltip: 'Закрыть избранное',
+              tooltip: trNullable(context, 'Закрыть избранное'),
               onPressed: onClose,
               icon: const Icon(Icons.close),
             ),
@@ -401,13 +402,13 @@ class FavoriteFolderPage extends StatelessWidget {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Избранное не бронирует дату. Доступность показана по текущему каталогу.',
+                     Text(
+                      tr(context, 'Избранное не бронирует дату. Доступность показана по текущему каталогу.'),
                     ),
                     const SizedBox(height: 24),
                     if (folder.entries.isEmpty)
-                      const Text(
-                        'В папке пока пусто. Добавьте подрядчика сердечком из каталога или подбора.',
+                       Text(
+                        tr(context, 'В папке пока пусто. Добавьте подрядчика сердечком из каталога или подбора.'),
                       ),
                     for (final entry in folder.entries) ...[
                       if (byId[entry.contractorId] case final contractor?) ...[
@@ -436,7 +437,7 @@ class FavoriteFolderPage extends StatelessWidget {
                                 : 'Каталог пока недоступен. Вернитесь после его загрузки, чтобы проверить профиль.',
                           ),
                           trailing: IconButton(
-                            tooltip: 'Убрать из папки',
+                            tooltip: trNullable(context, 'Убрать из папки'),
                             icon: const Icon(Icons.delete_outline),
                             onPressed: controller.saving
                                 ? null
@@ -462,7 +463,7 @@ class FavoriteFolderPage extends StatelessWidget {
                             ),
                             onPressed: () => onRestoreSearch(request),
                             icon: const Icon(Icons.search),
-                            label: const Text('Повторить этот поиск'),
+                            label:  Text(tr(context, 'Повторить этот поиск')),
                           ),
                         ),
                       ],

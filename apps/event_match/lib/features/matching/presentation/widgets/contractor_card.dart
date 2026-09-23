@@ -1,3 +1,4 @@
+import 'package:event_match/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../domain/models.dart';
 import '../../../../app/design_tokens.dart';
@@ -84,10 +85,10 @@ class ContractorCard extends StatelessWidget {
                     ? IconButton(
                         key: ValueKey('favorite-${c.id}'),
                         tooltip:
-                            favoriteTooltip ??
+                            trNullable(context, favoriteTooltip ??
                             (isFavorite
                                 ? 'Сохранено в избранном'
-                                : 'Сохранить в избранное'),
+                                : 'Сохранить в избранное')),
                         isSelected: isFavorite,
                         onPressed: favoriteBusy ? null : onFavorite,
                         style: IconButton.styleFrom(
@@ -198,7 +199,7 @@ class ContractorCard extends StatelessWidget {
                     recommendation: recommendation,
                   ),
                   icon: const Icon(Icons.arrow_outward, size: 18),
-                  label: const Text('Посмотреть профиль'),
+                  label:  Text(tr(context, 'Посмотреть профиль')),
                 ),
                 const SizedBox(height: 8),
                 Tooltip(
