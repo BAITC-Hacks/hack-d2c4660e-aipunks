@@ -31,6 +31,7 @@ class PortalRepository implements WorkspaceRepository {
   int? moderatedRevision;
   String? moderatedReason;
   bool throwModeration = false;
+  DateTime? failingCalendarMonth;
   @override
   Future<ContractorProfile?> getProfile(String uid) async => profile;
   @override
@@ -40,8 +41,11 @@ class PortalRepository implements WorkspaceRepository {
   @override
   Future<List<PublishedProfile>> listPublished() async => [?published];
   @override
-  Future<CalendarMonth?> getCalendar(String uid, DateTime month) async =>
-      calendar;
+  Future<CalendarMonth?> getCalendar(String uid, DateTime month) async {
+    if (month == failingCalendarMonth) throw StateError('Calendar unavailable');
+    return calendar;
+  }
+
   @override
   Future<void> saveCalendar(String uid, CalendarMonth value) async {
     calendar = CalendarMonth(
@@ -214,6 +218,88 @@ void main() {
       expect(repository.calendar!.busyDays, [12]);
       expect(repository.calendar!.isFresh(DateTime.now()), isTrue);
       expect(tester.widget<CheckboxListTile>(confirm).value, isFalse);
+    },
+  );
+
+  testWidgets(
+    'failed month switch cannot copy or confirm the previous month busy days',
+    (tester) async {
+      final now = DateTime.now();
+      final current = DateTime(now.year, now.month);
+      final next = DateTime(now.year, now.month + 1);
+      final repository = PortalRepository()
+        ..calendar = CalendarMonth(
+          ownerId: 'supplier',
+          year: current.year,
+          month: current.month,
+          busyDays: const [12],
+          confirmedAt: now,
+        )
+        ..failingCalendarMonth = next;
+      await pumpPage(
+        tester,
+        ContractorPage(
+          repository: repository,
+          uid: 'supplier',
+          section: 'calendar',
+        ),
+      );
+      final day12 = find.widgetWithText(FilterChip, '12');
+      expect(tester.widget<FilterChip>(day12).selected, isTrue);
+      final monthPicker = find.byType(DropdownButtonFormField<DateTime>);
+      final picker = tester.widget<DropdownButton<DateTime>>(
+        find.descendant(
+          of: monthPicker,
+          matching: find.byType(DropdownButton<DateTime>),
+        ),
+      );
+      final nextLabel =
+          (picker.items!.firstWhere((item) => item.value == next).child as Text)
+              .data!;
+      await tester.ensureVisible(monthPicker);
+      await tester.tap(monthPicker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(nextLabel).last);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Календарь не загрузился. Повторите попытку.'),
+        findsOneWidget,
+      );
+      expect(tester.widget<FilterChip>(day12).selected, isFalse);
+      expect(tester.widget<FilterChip>(day12).onSelected, isNull);
+      expect(
+        tester
+            .widget<CheckboxListTile>(find.byType(CheckboxListTile))
+            .onChanged,
+        isNull,
+      );
+      final save = find.widgetWithText(
+        FilledButton,
+        'Сохранить и подтвердить месяц',
+      );
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+      expect(repository.calendar!.month, current.month);
+
+      repository
+        ..failingCalendarMonth = null
+        ..calendar = null;
+      final retry = find.text('Повторить загрузку');
+      await tester.ensureVisible(retry);
+      await tester.tap(retry);
+      await tester.pumpAndSettle();
+      final day13 = find.widgetWithText(FilterChip, '13');
+      await tester.ensureVisible(day13);
+      await tester.tap(day13);
+      await tester.pump();
+      await tester.ensureVisible(find.byType(CheckboxListTile));
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pump();
+      await tester.ensureVisible(save);
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(repository.calendar!.month, next.month);
+      expect(repository.calendar!.year, next.year);
+      expect(repository.calendar!.busyDays, [13]);
     },
   );
 

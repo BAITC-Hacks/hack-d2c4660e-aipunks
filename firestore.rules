@@ -100,7 +100,7 @@ service cloud.firestore {
         && request.resource.data.revision is int
         && request.resource.data.revision == (exists(/databases/$(database)/documents/staffAccess/$(uid)) ? resource.data.revision + 1 : 1)
         && request.resource.data.updatedAt == request.time
-        && get(accountPath(uid)).data.status == 'active'
+        && (request.resource.data.role == 'none' || getAfter(accountPath(uid)).data.status == 'active')
         && audited('staff', uid, request.resource.data.revision, request.resource.data.role,
           getAfter(auditPath('staff', uid, request.resource.data.revision)).data.reason);
       allow delete: if false;

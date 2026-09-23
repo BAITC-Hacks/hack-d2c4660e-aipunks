@@ -299,6 +299,44 @@ test('revoked moderator fails immediately even with unchanged authentication tok
   await assertFails(getDocs(collection(moderator, 'profiles')));
 });
 
+test('admin can revoke inactive moderators but cannot grant them a role', async () => {
+  const store = db('admin');
+  for (const status of ['suspended', 'deactivated']) {
+    const target = `moderator-${status}`;
+    await seed({
+      [`accounts/${target}`]: account(target, status),
+      [`staffAccess/${target}`]: { role: 'moderator', revision: 1, updatedAt: oldTime },
+    });
+    const changeRole = (role, revision, withAudit = true) => {
+      const batch = writeBatch(store);
+      batch.update(doc(store, 'staffAccess', target), { role, revision, updatedAt: serverTimestamp() });
+      if (withAudit) batch.set(auditRef(store, 'staff', target, revision), audit('admin', 'staff', target, revision, role));
+      return batch;
+    };
+    await assertFails(changeRole('none', 2, false).commit());
+    await assertSucceeds(changeRole('none', 2).commit());
+    assert.equal((await getDoc(doc(store, 'staffAccess', target))).data().role, 'none');
+    await assertFails(changeRole('moderator', 3).commit());
+    if (status === 'suspended') {
+      const restore = writeBatch(store);
+      restore.update(doc(store, 'accounts', target), { status: 'active', revision: 2, updatedAt: serverTimestamp() });
+      restore.set(auditRef(store, 'account', target, 2), audit('admin', 'account', target, 2, 'active'));
+      await assertSucceeds(restore.commit());
+      await assertFails(getDocs(collection(db(target), 'profiles')));
+    }
+  }
+});
+
+test('a role grant cannot be combined with suspending its target', async () => {
+  const store = db('admin');
+  const batch = writeBatch(store);
+  batch.update(doc(store, 'accounts/client'), { status: 'suspended', revision: 2, updatedAt: serverTimestamp() });
+  batch.set(auditRef(store, 'account', 'client', 2), audit('admin', 'account', 'client', 2, 'suspended'));
+  batch.set(doc(store, 'staffAccess/client'), { role: 'moderator', revision: 1, updatedAt: serverTimestamp() });
+  batch.set(auditRef(store, 'staff', 'client', 1), audit('admin', 'staff', 'client', 1, 'moderator'));
+  await assertFails(batch.commit());
+});
+
 test('unknown collections and server-only assistant state deny client access', async () => {
   for (const path of ['unknown/doc', 'assistant_cache/doc', 'assistant_rate_limits/doc']) {
     await assertFails(setDoc(doc(db('admin'), path), { value: 1 }));

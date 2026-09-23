@@ -599,6 +599,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
   CalendarMonth? _stored;
   Set<int> _busyDays = {};
   bool _loading = true, _saving = false, _confirmed = false, _dirty = false;
+  bool _loaded = false;
   String? _error;
   int _generation = 0;
 
@@ -612,8 +613,12 @@ class _CalendarEditorState extends State<_CalendarEditor> {
     final generation = ++_generation;
     setState(() {
       _loading = true;
+      _loaded = false;
       _error = null;
       _confirmed = false;
+      _stored = null;
+      _busyDays = {};
+      _dirty = false;
     });
     try {
       final data = await widget.repository.getCalendar(widget.uid, _month);
@@ -621,6 +626,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
         setState(() {
           _stored = data;
           _busyDays = data?.busyDays.toSet() ?? {};
+          _loaded = true;
           _dirty = false;
         });
       }
@@ -661,6 +667,9 @@ class _CalendarEditorState extends State<_CalendarEditor> {
   }
 
   Future<void> _save() async {
+    if (!_loaded || _loading || _saving || !_confirmed || !widget.hasProfile) {
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -776,10 +785,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
                       child: FilterChip(
                         label: Text('$day'),
                         selected: _busyDays.contains(day),
-                        onSelected:
-                            _saving ||
-                                !widget.hasProfile ||
-                                _error != null && _stored == null
+                        onSelected: _saving || !widget.hasProfile || !_loaded
                             ? null
                             : (selected) => setState(() {
                                 selected
@@ -798,10 +804,7 @@ class _CalendarEditorState extends State<_CalendarEditor> {
                 contentPadding: EdgeInsets.zero,
                 value: _confirmed,
                 controlAffinity: ListTileControlAffinity.leading,
-                onChanged:
-                    _saving ||
-                        !widget.hasProfile ||
-                        _error != null && _stored == null
+                onChanged: _saving || !widget.hasProfile || !_loaded
                     ? null
                     : (value) => setState(() => _confirmed = value ?? false),
                 title: const Text(
@@ -813,7 +816,8 @@ class _CalendarEditorState extends State<_CalendarEditor> {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: _confirmed && !_saving && widget.hasProfile
+                onPressed:
+                    _confirmed && !_saving && widget.hasProfile && _loaded
                     ? _save
                     : null,
                 icon: const Icon(Icons.event_available_outlined),
