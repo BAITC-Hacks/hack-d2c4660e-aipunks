@@ -4,6 +4,7 @@
 
 - [Подключение Firebase, email/Google и Android](docs/firebase.md)
 - [Кабинеты, правила доступа, модерация и служебные инструменты](docs/accounts-backend.md)
+- [Заявки, переписка и поддержка](docs/communications.md)
 - [Приёмка кабинетов и границы выполненной проверки](docs/accounts-acceptance.md)
 - [Архитектура](docs/architecture.md) · [подбор](docs/pipeline.md) · [разработка](docs/development.md)
 - [Помощник: отдельный демонстрационный сценарий](docs/assistant.md) · [контракт](docs/assistant-contract.md)
@@ -19,6 +20,8 @@
 | План `/client/planner` | Сравнение, выбор команды, общий бюджет по ценам «от», заметки, checklist и черновик обращения |
 | Подрядчик `/contractor/overview` | Черновик, замороженная версия на проверке, замечания, календарь, снятие публикации |
 | Команда `/admin/overview` | Модерация с версиями, блокировки, модераторы, качество каталога и журнал |
+| Коммуникация `/client/messages`, `/contractor/messages` | Заявки по мероприятию, статусы, переписка и непрочитанные |
+| Поддержка `/client/support`, `/contractor/support`, `/admin/support` | Обращения, назначение администратора, явный доступ к контексту и аудит |
 | Демо `/demo` | Исходные 66 анонимизированных анкет и окно дат 23.09–31.12.2026 |
 | Помощник `/assistant` | Отдельный демосценарий; требования AI/backend описаны в документации помощника |
 
@@ -81,6 +84,7 @@ python3 scripts/import_catalog.py data/catalog.csv apps/event_match/assets/data/
 apps/event_match/lib/app/                 тема, маршруты, оболочка
 apps/event_match/lib/features/auth/       Firebase gateway, сессия, вход
 apps/event_match/lib/features/workspace/  модели, Firestore, кабинеты
+apps/event_match/lib/features/communication/ заявки, переписка и поддержка
 apps/event_match/lib/features/matching/   формы, карточки, ядро подбора
 apps/event_match/lib/features/assistant/  отдельный демопомощник
 firestore.rules                          серверный доступ и аудит
