@@ -15,6 +15,7 @@ import '../features/matching/domain/recommendation_service.dart';
 import '../features/matching/domain/models.dart';
 import '../features/planning/data/firestore_event_plan_repository.dart';
 import '../features/planning/domain/event_plan_repository.dart';
+import '../features/planning/domain/event_plan_draft_store.dart';
 import '../features/planning/presentation/event_plan_page.dart';
 import '../features/workspace/domain/workspace_repository.dart';
 import '../features/workspace/presentation/admin_page.dart';
@@ -54,10 +55,23 @@ class _EventMatchAppState extends State<EventMatchApp> {
   CommunicationRepository? _communications;
   final CatalogRepository _demoRepository = AssetCatalogRepository();
   AssistantSession? _assistantSession;
+  final _planDrafts = EventPlanDraftStore();
+  String? _workspaceUid;
+
+  void _accountChanged() {
+    final next = widget.session?.uid;
+    if (_workspaceUid != next) {
+      _planDrafts.clear();
+      _workspaceUid = next;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     if (widget.session != null && widget.workspace != null) {
+      _workspaceUid = widget.session!.uid;
+      widget.session!.addListener(_accountChanged);
       _router = _createRouter();
     }
   }
@@ -233,6 +247,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
                         widget.plans ?? FirestoreEventPlanRepository(),
                     uid: session.uid!,
                     initialEventId: state.uri.queryParameters['event'],
+                    draftStore: _planDrafts,
                     onOpenEvents: () => context.go('/client/events'),
                   );
                 }
@@ -295,6 +310,7 @@ class _EventMatchAppState extends State<EventMatchApp> {
 
   @override
   void dispose() {
+    widget.session?.removeListener(_accountChanged);
     _router?.dispose();
     _assistantSession?.dispose();
     super.dispose();

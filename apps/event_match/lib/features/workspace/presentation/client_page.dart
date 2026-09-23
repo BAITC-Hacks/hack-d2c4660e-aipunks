@@ -14,10 +14,13 @@ class ClientPage extends StatefulWidget {
     required this.uid,
     this.section = 'events',
     this.onOpenPlan,
+    this.onFindContractors,
   });
   final WorkspaceRepository repository;
   final String uid, section;
   final ValueChanged<String>? onOpenPlan;
+  final void Function(ClientEvent event, SavedSelection? selection)?
+  onFindContractors;
   @override
   State<ClientPage> createState() => _ClientPageState();
 }
@@ -92,12 +95,19 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   Future<void> _editEvent([ClientEvent? event]) async {
+    final repository = widget.repository;
+    final uid = widget.uid;
     final value = await showDialog<ClientEvent>(
       context: context,
-      builder: (context) => EventEditor(event: event),
+      barrierDismissible: false,
+      builder: (context) => EventEditor(
+        event: event,
+        onSave: (value) async {
+          await repository.saveEvent(uid, value);
+        },
+      ),
     );
     if (value == null || !mounted) return;
-    await widget.repository.saveEvent(widget.uid, value);
     reload();
   }
 
@@ -126,7 +136,7 @@ class _ClientPageState extends State<ClientPage> {
             budget: previous?.budget ?? 1000000,
             hours: previous?.hours,
             language: previous?.language,
-            preferences: event.preferences,
+            preferences: previous?.preferences ?? event.preferences,
           ),
         );
         return MediaQuery.sizeOf(context).width < 700
@@ -143,6 +153,10 @@ class _ClientPageState extends State<ClientPage> {
   }
 
   Future<void> _pick(ClientEvent event, {SavedSelection? saved}) async {
+    if (widget.onFindContractors != null) {
+      widget.onFindContractors!(event, saved);
+      return;
+    }
     final request = await _conditions(event, previous: saved?.request);
     if (request == null || !mounted) return;
     final result = await LiveRecommendationService(
@@ -319,8 +333,7 @@ class _ClientPageState extends State<ClientPage> {
       changes.add('Мероприятие удалено');
     } else if (event.city != s.request.city ||
         dateKey(event.date) != dateKey(s.request.date) ||
-        event.format != s.request.format ||
-        event.preferences != s.request.preferences) {
+        event.format != s.request.format) {
       changes.add('Условия мероприятия изменились');
     }
     for (final r in s.entries) {
@@ -542,8 +555,9 @@ class _ClientPageState extends State<ClientPage> {
 }
 
 class EventEditor extends StatefulWidget {
-  const EventEditor({super.key, this.event});
+  const EventEditor({super.key, this.event, this.onSave});
   final ClientEvent? event;
+  final Future<void> Function(ClientEvent value)? onSave;
   @override
   State<EventEditor> createState() => _EventEditorState();
 }
@@ -557,6 +571,8 @@ class _EventEditorState extends State<EventEditor> {
   late String city = widget.event?.city ?? 'Алматы',
       format = widget.event?.format ?? 'свадьба';
   late DateTime date = widget.event?.date ?? eventToday();
+  bool _saving = false;
+  String? _error;
   @override
   void dispose() {
     name.dispose();
@@ -564,107 +580,140 @@ class _EventEditorState extends State<EventEditor> {
     super.dispose();
   }
 
+  Future<void> _save() async {
+    if (_saving ||
+        !form.currentState!.validate() ||
+        !MatchDatePolicy.live().contains(date)) {
+      return;
+    }
+    final value = ClientEvent(
+      id: widget.event?.id ?? '',
+      name: name.text.trim(),
+      city: city,
+      date: date,
+      format: format,
+      preferences: preferences.text.trim(),
+    );
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave?.call(value);
+      if (mounted) Navigator.pop(context, value);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error =
+            'Не удалось сохранить мероприятие. Ваши изменения остались здесь. '
+            'Проверьте соединение и повторите.';
+      });
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(
-      widget.event == null ? 'Новое мероприятие' : 'Изменить мероприятие',
-    ),
-    content: SingleChildScrollView(
-      child: SizedBox(
-        width: 480,
-        child: Form(
-          key: form,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: name,
-                maxLength: 120,
-                decoration: const InputDecoration(labelText: 'Название'),
-                validator: (v) =>
-                    (v ?? '').trim().isEmpty ? 'Укажите название' : null,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: city,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Город'),
-                items: [
-                  for (final c in eventCities)
-                    DropdownMenuItem(value: c, child: Text(c)),
-                ],
-                onChanged: (v) => setState(() => city = v!),
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: format,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Формат'),
-                items: [
-                  for (final f in eventFormats)
-                    DropdownMenuItem(value: f, child: Text(f)),
-                ],
-                onChanged: (v) => setState(() => format = v!),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () async {
-                  final policy = MatchDatePolicy.live();
-                  final value = await showDatePicker(
-                    context: context,
-                    initialDate: policy.contains(date)
-                        ? date
-                        : policy.firstDate,
-                    firstDate: policy.firstDate,
-                    lastDate: policy.lastDate,
-                  );
-                  if (value != null && mounted) setState(() => date = value);
-                },
-                icon: const Icon(Icons.calendar_today_outlined),
-                label: Text('Дата: ${workspaceDate(date)}'),
-              ),
-              const SizedBox(height: 16),
-              if (!MatchDatePolicy.live().contains(date))
-                const Text('Выберите дату в ближайшие 365 дней.'),
-              TextFormField(
-                controller: preferences,
-                minLines: 3,
-                maxLines: 5,
-                maxLength: 1000,
-                decoration: const InputDecoration(
-                  labelText: 'Что важно для события?',
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_saving,
+    child: AlertDialog(
+      title: Text(
+        widget.event == null ? 'Новое мероприятие' : 'Изменить мероприятие',
+      ),
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 480,
+          child: Form(
+            key: form,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_error != null)
+                  Semantics(
+                    liveRegion: true,
+                    child: WorkspaceNotice(_error!, error: true),
+                  ),
+                TextFormField(
+                  controller: name,
+                  enabled: !_saving,
+                  maxLength: 120,
+                  decoration: const InputDecoration(labelText: 'Название'),
+                  validator: (v) =>
+                      (v ?? '').trim().isEmpty ? 'Укажите название' : null,
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: city,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Город'),
+                  items: [
+                    for (final c in eventCities)
+                      DropdownMenuItem(value: c, child: Text(c)),
+                  ],
+                  onChanged: _saving ? null : (v) => setState(() => city = v!),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: format,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Формат'),
+                  items: [
+                    for (final f in eventFormats)
+                      DropdownMenuItem(value: f, child: Text(f)),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (v) => setState(() => format = v!),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: _saving
+                      ? null
+                      : () async {
+                          final policy = MatchDatePolicy.live();
+                          final value = await showDatePicker(
+                            context: context,
+                            initialDate: policy.contains(date)
+                                ? date
+                                : policy.firstDate,
+                            firstDate: policy.firstDate,
+                            lastDate: policy.lastDate,
+                          );
+                          if (value != null && mounted) {
+                            setState(() => date = value);
+                          }
+                        },
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  label: Text('Дата: ${workspaceDate(date)}'),
+                ),
+                const SizedBox(height: 16),
+                if (!MatchDatePolicy.live().contains(date))
+                  const Text('Выберите дату в ближайшие 365 дней.'),
+                TextFormField(
+                  controller: preferences,
+                  enabled: !_saving,
+                  minLines: 3,
+                  maxLines: 5,
+                  maxLength: 1000,
+                  decoration: const InputDecoration(
+                    labelText: 'Что важно для события?',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.pop(context),
+          child: const Text('Отмена'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: Text(_saving ? 'Сохраняем…' : 'Сохранить'),
+        ),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('Отмена'),
-      ),
-      FilledButton(
-        onPressed: () {
-          if (!form.currentState!.validate() ||
-              !MatchDatePolicy.live().contains(date)) {
-            return;
-          }
-          Navigator.pop(
-            context,
-            ClientEvent(
-              id: widget.event?.id ?? '',
-              name: name.text.trim(),
-              city: city,
-              date: date,
-              format: format,
-              preferences: preferences.text.trim(),
-            ),
-          );
-        },
-        child: const Text('Сохранить'),
-      ),
-    ],
   );
 }

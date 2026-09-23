@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:event_match/app/app_theme.dart';
 import 'package:event_match/features/matching/domain/models.dart';
 import 'package:event_match/features/planning/domain/event_plan.dart';
+import 'package:event_match/features/planning/domain/event_plan_draft_store.dart';
 import 'package:event_match/features/planning/domain/event_plan_repository.dart';
 import 'package:event_match/features/planning/presentation/event_plan_page.dart';
 import 'package:event_match/features/workspace/domain/workspace_models.dart';
@@ -161,6 +162,9 @@ Future<void> _pump(
   double height = 1100,
   GlobalKey? previewKey,
   String uid = 'client',
+  String? initialEventId,
+  EventPlanDraftStore? draftStore,
+  void Function(ClientEvent, String?)? onFindContractors,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1;
@@ -184,6 +188,9 @@ Future<void> _pump(
                 workspace: workspace,
                 plans: plans,
                 uid: uid,
+                initialEventId: initialEventId,
+                draftStore: draftStore,
+                onFindContractors: onFindContractors,
               ),
             ),
           ),
@@ -209,6 +216,155 @@ Future<void> _enter(WidgetTester tester, String key, String text) async {
 }
 
 void main() {
+  testWidgets(
+    'plan starts integrated matching with current event without dropping draft',
+    (tester) async {
+      final workspace = _Workspace();
+      final drafts = EventPlanDraftStore();
+      ClientEvent? passed;
+      await _pump(
+        tester,
+        workspace,
+        _Plans(),
+        draftStore: drafts,
+        onFindContractors: (event, category) {
+          passed = event;
+          expect(category, isNull);
+        },
+      );
+      await _enter(tester, 'plan-notes', 'Оставить при подборе');
+      await _tap(tester, find.text('Подобрать специалиста'));
+      expect(passed, same(workspace.event));
+      expect(
+        drafts.read('client', workspace.event.id)!.notesText,
+        'Оставить при подборе',
+      );
+    },
+  );
+
+  testWidgets(
+    'session draft survives section navigation with choices and raw fields',
+    (tester) async {
+      final workspace = _Workspace();
+      final plans = _Plans();
+      final drafts = EventPlanDraftStore();
+      await _pump(tester, workspace, plans, draftStore: drafts);
+      await _tap(tester, find.byKey(const Key('choose-selection-1-p1')));
+      await _enter(tester, 'plan-budget', '0');
+      await _enter(tester, 'plan-notes', 'Не терять после перехода в каталог');
+      await _tap(tester, find.byKey(const Key('task-confirm_scope')));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _pump(tester, workspace, plans, draftStore: drafts);
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('plan-budget')))
+            .controller!
+            .text,
+        '0',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('plan-notes')))
+            .controller!
+            .text,
+        'Не терять после перехода в каталог',
+      );
+      expect(find.byKey(const Key('clear-Ведущий')), findsOneWidget);
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.byKey(const Key('task-confirm_scope')),
+            )
+            .value,
+        isTrue,
+      );
+      expect(find.text('Есть несохранённые изменения'), findsOneWidget);
+      expect(plans.writes, 0);
+    },
+  );
+
+  testWidgets(
+    'last selected event survives page recreation and successful save clears its draft',
+    (tester) async {
+      final workspace = _Workspace()..addSecondEvent = true;
+      final plans = _Plans();
+      final drafts = EventPlanDraftStore();
+      await _pump(tester, workspace, plans, draftStore: drafts);
+      await _tap(tester, find.byType(DropdownButtonFormField<String>));
+      await _tap(tester, find.text('Вторая встреча').last);
+      await _enter(tester, 'plan-notes', 'Черновик второго события');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await _pump(tester, workspace, plans, draftStore: drafts);
+      expect(
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.byType(DropdownButtonFormField<String>),
+            )
+            .initialValue,
+        'event-2',
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('plan-notes')))
+            .controller!
+            .text,
+        'Черновик второго события',
+      );
+      await _tap(tester, find.byKey(const Key('save-event-plan-bottom')));
+      expect(drafts.read('client', 'event-2'), isNull);
+      expect(plans.stored['event-2']!.notes, 'Черновик второго события');
+    },
+  );
+
+  testWidgets('explicit missing event never opens first event plan', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      _Workspace(),
+      _Plans(),
+      initialEventId: 'removed-event',
+    );
+    expect(find.text('Мероприятие не найдено'), findsOneWidget);
+    expect(find.byKey(const Key('plan-notes')), findsNothing);
+    expect(find.text('Праздник команды'), findsNothing);
+  });
+
+  testWidgets(
+    'changed remote revision exposes local draft without applying or overwriting it',
+    (tester) async {
+      final workspace = _Workspace();
+      final plans = _Plans();
+      final drafts = EventPlanDraftStore();
+      await _pump(tester, workspace, plans, draftStore: drafts);
+      await _enter(tester, 'plan-notes', 'Мои несохранённые заметки');
+      await tester.pumpWidget(const SizedBox.shrink());
+      plans.stored['event-1'] = const EventPlan(
+        eventId: 'event-1',
+        notes: 'Новая сохранённая версия',
+        revision: 1,
+      );
+      await _pump(tester, workspace, plans, draftStore: drafts);
+      expect(find.textContaining('Ваш черновик не применён'), findsOneWidget);
+      expect(find.text('Мои несохранённые заметки'), findsOneWidget);
+      expect(find.byKey(const Key('plan-notes')), findsNothing);
+      expect(drafts.read('client', 'event-1'), isNotNull);
+      expect(plans.writes, 0);
+      await _tap(
+        tester,
+        find.byKey(const Key('discard-conflicting-plan-draft')),
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const Key('plan-notes')))
+            .controller!
+            .text,
+        'Новая сохранённая версия',
+      );
+      expect(drafts.read('client', 'event-1'), isNull);
+    },
+  );
+
   testWidgets('late save response cannot replace a different account plan', (
     tester,
   ) async {

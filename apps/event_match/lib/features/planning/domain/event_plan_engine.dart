@@ -94,8 +94,7 @@ class EventPlanEngine {
       final stale =
           event.city != request.city ||
           dateKey(event.date) != dateKey(request.date) ||
-          event.format != request.format ||
-          event.preferences.trim() != request.preferences.trim();
+          event.format != request.format;
       var validRequest = true;
       try {
         request.validate(datePolicy: MatchDatePolicy.live(now));
@@ -260,6 +259,9 @@ String buildCandidateBrief({
     if (request.language != null) 'Язык: ${request.language}.',
     if (event.preferences.trim().isNotEmpty)
       'Пожелания: ${event.preferences.trim()}',
+    if (request.preferences.trim().isNotEmpty &&
+        request.preferences.trim() != event.preferences.trim())
+      'Пожелания к специалисту: ${request.preferences.trim()}',
     'Подтвердите, пожалуйста, доступность на эту дату, состав услуг, '
         'итоговую стоимость и условия договора.',
   ].join('\n');

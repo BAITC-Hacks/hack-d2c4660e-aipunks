@@ -6,6 +6,7 @@ import '../../workspace/domain/workspace_models.dart';
 import '../../workspace/domain/workspace_repository.dart';
 import '../../workspace/presentation/workspace_widgets.dart';
 import '../domain/event_plan.dart';
+import '../domain/event_plan_draft_store.dart';
 import '../domain/event_plan_engine.dart';
 import '../domain/event_plan_repository.dart';
 
@@ -18,6 +19,8 @@ class EventPlanPage extends StatefulWidget {
     required this.uid,
     this.initialEventId,
     this.onOpenEvents,
+    this.draftStore,
+    this.onFindContractors,
   });
 
   final WorkspaceRepository workspace;
@@ -25,6 +28,8 @@ class EventPlanPage extends StatefulWidget {
   final String uid;
   final String? initialEventId;
   final VoidCallback? onOpenEvents;
+  final EventPlanDraftStore? draftStore;
+  final void Function(ClientEvent event, String? category)? onFindContractors;
 
   @override
   State<EventPlanPage> createState() => _EventPlanPageState();
@@ -34,6 +39,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
   final _budget = TextEditingController();
   final _notes = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _localDrafts = EventPlanDraftStore();
   List<ClientEvent> _events = [];
   List<SavedSelection> _selections = [];
   Map<String, PublishedProfile> _published = {};
@@ -45,15 +51,18 @@ class _EventPlanPageState extends State<EventPlanPage> {
   bool _dirty = false;
   String? _loadError;
   String? _saveError;
+  String? _missingEventId;
+  EventPlanDraft? _draftConflict;
   int _loadGeneration = 0;
   int _eventPickerVersion = 0;
 
   bool get _locked => _loading || _saving;
+  EventPlanDraftStore get _drafts => widget.draftStore ?? _localDrafts;
 
   @override
   void initState() {
     super.initState();
-    _load(widget.initialEventId);
+    _load(widget.initialEventId ?? _drafts.selectedEvent(widget.uid));
   }
 
   @override
@@ -61,11 +70,13 @@ class _EventPlanPageState extends State<EventPlanPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.uid != widget.uid ||
         oldWidget.workspace != widget.workspace ||
-        oldWidget.plans != widget.plans) {
+        oldWidget.plans != widget.plans ||
+        oldWidget.draftStore != widget.draftStore ||
+        oldWidget.initialEventId != widget.initialEventId) {
       _event = null;
       _plan = null;
       _dirty = false;
-      _load(widget.initialEventId);
+      _load(widget.initialEventId ?? _drafts.selectedEvent(widget.uid));
     }
   }
 
@@ -81,6 +92,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
     final uid = widget.uid;
     final workspace = widget.workspace;
     final plans = widget.plans;
+    final drafts = _drafts;
     setState(() {
       _loading = true;
       _saving = false;
@@ -98,10 +110,17 @@ class _EventPlanPageState extends State<EventPlanPage> {
         for (final profile in values[2] as List<PublishedProfile>)
           if (profile.published) profile.ownerId: profile,
       };
-      final event =
-          events.where((e) => e.id == eventId).firstOrNull ??
-          events.firstOrNull;
-      final plan = event == null ? null : await plans.getPlan(uid, event.id);
+      final event = eventId == null
+          ? events.firstOrNull
+          : events.where((e) => e.id == eventId).firstOrNull;
+      final remote = event == null ? null : await plans.getPlan(uid, event.id);
+      final draft = event == null ? null : drafts.read(uid, event.id);
+      final canRestore =
+          event != null &&
+          remote != null &&
+          draft != null &&
+          draft.matches(event, remote);
+      final plan = canRestore ? draft.plan : remote;
       final calendars = <String, CalendarMonth?>{};
       if (event != null && plan != null) {
         final ids = <String>{
@@ -118,6 +137,7 @@ class _EventPlanPageState extends State<EventPlanPage> {
         );
       }
       if (!mounted || generation != _loadGeneration) return;
+      if (event != null) drafts.selectEvent(uid, event.id);
       setState(() {
         _events = events;
         _selections = selections;
@@ -125,9 +145,13 @@ class _EventPlanPageState extends State<EventPlanPage> {
         _calendars = calendars;
         _event = event;
         _plan = plan;
-        _budget.text = plan?.totalBudgetKzt?.toString() ?? '';
-        _notes.text = plan?.notes ?? '';
-        _dirty = false;
+        _budget.text = canRestore
+            ? draft.budgetText
+            : plan?.totalBudgetKzt?.toString() ?? '';
+        _notes.text = canRestore ? draft.notesText : plan?.notes ?? '';
+        _dirty = canRestore;
+        _draftConflict = draft != null && !canRestore ? draft : null;
+        _missingEventId = eventId != null && event == null ? eventId : null;
         _saveError = null;
       });
     } catch (_) {
@@ -170,14 +194,28 @@ class _EventPlanPageState extends State<EventPlanPage> {
 
   Future<void> _reload([String? eventId]) async {
     if (!await _allowDiscard() || !mounted) return;
-    await _load(eventId ?? _event?.id ?? widget.initialEventId);
+    if (_dirty && _event != null) _drafts.remove(widget.uid, _event!.id);
+    await _load(
+      eventId ?? _event?.id ?? _missingEventId ?? widget.initialEventId,
+    );
   }
 
-  void _edit(EventPlan plan) => setState(() {
-    _plan = plan;
-    _dirty = true;
-    _saveError = null;
-  });
+  void _edit(EventPlan plan) {
+    _drafts.write(
+      widget.uid,
+      EventPlanDraft(
+        event: _event!,
+        plan: plan,
+        budgetText: _budget.text,
+        notesText: _notes.text,
+      ),
+    );
+    setState(() {
+      _plan = plan;
+      _dirty = true;
+      _saveError = null;
+    });
+  }
 
   String? _validateBudget(String? value) {
     final text = value?.trim() ?? '';
@@ -192,6 +230,9 @@ class _EventPlanPageState extends State<EventPlanPage> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final generation = _loadGeneration;
+    final uid = widget.uid;
+    final drafts = _drafts;
+    final sessionDraft = drafts.read(uid, _plan!.eventId);
     final draft = _plan!.copyWith(
       totalBudgetKzt: int.tryParse(_budget.text.trim()),
       notes: _notes.text.trim(),
@@ -201,7 +242,10 @@ class _EventPlanPageState extends State<EventPlanPage> {
       _saveError = null;
     });
     try {
-      final saved = await widget.plans.savePlan(widget.uid, draft);
+      final saved = await widget.plans.savePlan(uid, draft);
+      if (sessionDraft != null) {
+        drafts.remove(uid, draft.eventId, ifUnchanged: sessionDraft);
+      }
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _plan = saved;
@@ -262,10 +306,13 @@ class _EventPlanPageState extends State<EventPlanPage> {
         ],
         if (_event == null && _loadError == null)
           WorkspaceEmpty(
-            title: 'Начните с мероприятия',
-            message:
-                'Создайте мероприятие и сохраните подборку в разделе «Мои мероприятия». '
-                'Здесь можно будет сравнить кандидатов и собрать план.',
+            title: _missingEventId != null
+                ? 'Мероприятие не найдено'
+                : 'Начните с мероприятия',
+            message: _missingEventId != null
+                ? 'Это мероприятие удалено или недоступно. Выберите существующее мероприятие в своём кабинете.'
+                : 'Создайте мероприятие и сохраните подборку в разделе «Мои мероприятия». '
+                      'Здесь можно будет сравнить кандидатов и собрать план.',
             icon: Icons.event_note_outlined,
             action: widget.onOpenEvents == null
                 ? null
@@ -275,8 +322,82 @@ class _EventPlanPageState extends State<EventPlanPage> {
                     label: const Text('Мои мероприятия'),
                   ),
           ),
-        if (_event != null && _plan != null) _planner(),
+        if (_event != null && _plan != null)
+          _draftConflict == null ? _planner() : _conflictingDraft(),
       ],
+    );
+  }
+
+  Widget _conflictingDraft() {
+    final draft = _draftConflict!;
+    return WorkspaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            liveRegion: true,
+            child: const WorkspaceNotice(
+              'Сохранённый план или условия мероприятия изменились. '
+              'Ваш черновик не применён, чтобы не перезаписать актуальные данные. '
+              'Скопируйте нужные заметки перед удалением старого черновика.',
+              error: true,
+            ),
+          ),
+          Text(
+            'Черновик: ${_event!.name}',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          Text('${draft.date} · ${draft.city} · ${draft.format}'),
+          Text(
+            'Бюджет: ${draft.budgetText.isEmpty ? 'не указан' : '${draft.budgetText} ₸'}',
+          ),
+          for (final choice in draft.plan.choices.entries)
+            Text(
+              '${choice.key}: ${_published[choice.value.contractorId]?.content.name ?? choice.value.contractorId}',
+            ),
+          for (final task in draft.plan.completedTaskIds)
+            Text('Выполнено: ${planningTasks[task] ?? task}'),
+          if (draft.notesText.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SelectableText(draft.notesText),
+          ],
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              if (draft.notesText.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(text: draft.notesText),
+                    );
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Заметки скопированы')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_outlined),
+                  label: const Text('Скопировать заметки'),
+                ),
+              FilledButton(
+                key: const Key('discard-conflicting-plan-draft'),
+                onPressed: () {
+                  _drafts.remove(widget.uid, draft.eventId, ifUnchanged: draft);
+                  setState(() => _draftConflict = null);
+                },
+                child: const Text('Удалить старый черновик'),
+              ),
+              if (widget.onOpenEvents != null)
+                TextButton(
+                  onPressed: widget.onOpenEvents,
+                  child: const Text('Мои мероприятия'),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -357,6 +478,14 @@ class _EventPlanPageState extends State<EventPlanPage> {
                       icon: const Icon(Icons.refresh),
                       label: const Text('Обновить данные'),
                     ),
+                    if (widget.onFindContractors != null)
+                      OutlinedButton.icon(
+                        onPressed: _locked
+                            ? null
+                            : () => widget.onFindContractors!(event, null),
+                        icon: const Icon(Icons.auto_awesome_outlined),
+                        label: const Text('Подобрать специалиста'),
+                      ),
                     Text(
                       _dirty
                           ? 'Есть несохранённые изменения'
@@ -376,7 +505,15 @@ class _EventPlanPageState extends State<EventPlanPage> {
               title: 'Добавьте кандидатов в план',
               message:
                   'Сохраните подборку для этого мероприятия. Затем выберите по одному подрядчику в каждой категории.',
-              action: widget.onOpenEvents == null
+              action: widget.onFindContractors != null
+                  ? OutlinedButton.icon(
+                      onPressed: _locked
+                          ? null
+                          : () => widget.onFindContractors!(event, null),
+                      icon: const Icon(Icons.auto_awesome_outlined),
+                      label: const Text('Подобрать специалиста'),
+                    )
+                  : widget.onOpenEvents == null
                   ? null
                   : OutlinedButton(
                       onPressed: widget.onOpenEvents,

@@ -271,7 +271,6 @@ void main() {
         selection(city: 'Астана'),
         selection(date: DateTime(2026, 11, 15)),
         selection(format: 'той'),
-        selection(preferences: 'Другие пожелания'),
       ]) {
         final result = review(selections: [saved]);
         expect(result.groups.single.staleBrief, isTrue);
@@ -281,6 +280,18 @@ void main() {
         expect(result.estimatedFromKzt, isNull);
         expect(result.remainingBudgetKzt, isNull);
       }
+    },
+  );
+
+  test(
+    'category wishes do not invalidate otherwise current saved selection',
+    () {
+      final result = review(
+        selections: [selection(preferences: 'Без конкурсов')],
+      );
+      expect(result.groups.single.staleBrief, isFalse);
+      expect(result.groups.single.candidates.single.canChoose, isTrue);
+      expect(result.unresolvedCount, 0);
     },
   );
 
@@ -475,6 +486,19 @@ void main() {
         ),
       );
       expect(complete.groups.single.candidates.single.draftBrief, draft);
+    },
+  );
+
+  test(
+    'candidate brief preserves event context and category-specific wishes',
+    () {
+      final draft = review(
+        selections: [selection(preferences: 'Никаких конкурсов')],
+      ).groups.single.candidates.single.draftBrief;
+      expect(draft, contains('Пожелания: Спокойная программа'));
+      expect(draft, contains('Пожелания к специалисту: Никаких конкурсов'));
+      expect(draft, contains('2026-11-14'));
+      expect(draft, contains('Бюджет категории: до 200000'));
     },
   );
 }

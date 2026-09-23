@@ -34,6 +34,7 @@ class ClientRepository implements WorkspaceRepository {
   ProfileContent? currentContent = providerContent;
   bool busy = false;
   bool failFavoriteWrite = false;
+  bool failEventWrite = false;
   final List<bool> favoriteWrites = [];
 
   @override
@@ -51,6 +52,7 @@ class ClientRepository implements WorkspaceRepository {
   Future<List<ClientEvent>> listEvents(String uid) async => events.toList();
   @override
   Future<String> saveEvent(String uid, ClientEvent value) async {
+    if (failEventWrite) throw StateError('Offline');
     final id = value.id.isEmpty ? 'event-${events.length + 1}' : value.id;
     events.removeWhere((e) => e.id == id);
     events.add(
@@ -198,6 +200,85 @@ void seedEventAndSelection(ClientRepository repository) {
 
 void main() {
   testWidgets(
+    'event and selection actions pass their context to integrated matching',
+    (tester) async {
+      final repository = ClientRepository();
+      seedEventAndSelection(repository);
+      ClientEvent? passedEvent;
+      SavedSelection? passedSelection;
+      void findContractors(ClientEvent event, SavedSelection? selection) {
+        passedEvent = event;
+        passedSelection = selection;
+      }
+
+      await pump(
+        tester,
+        ClientPage(
+          repository: repository,
+          uid: 'client',
+          onFindContractors: findContractors,
+        ),
+      );
+      await openAction(tester, find.text('Подобрать подрядчиков'));
+      expect(passedEvent, same(repository.events.single));
+      expect(passedSelection, isNull);
+      expect(find.byKey(const Key('apply-filters')), findsNothing);
+      await pump(
+        tester,
+        ClientPage(
+          repository: repository,
+          uid: 'client',
+          section: 'selections',
+          onFindContractors: findContractors,
+        ),
+      );
+      await openAction(tester, find.text('Обновить подбор'));
+      expect(passedSelection, same(repository.selections.single));
+      expect(find.byKey(const Key('apply-filters')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'category-specific wishes remain current and survive legacy refresh',
+    (tester) async {
+      final repository = ClientRepository();
+      seedEventAndSelection(repository);
+      final before = repository.selections.single;
+      repository.selections[0] = SavedSelection(
+        id: before.id,
+        eventId: before.eventId,
+        name: before.name,
+        entries: before.entries,
+        request: MatchRequest.fromJson({
+          ...before.request.toJson(),
+          'preferences': 'Ведущий без конкурсов',
+        }),
+      );
+      await pump(
+        tester,
+        ClientPage(
+          repository: repository,
+          uid: 'client',
+          section: 'selections',
+        ),
+      );
+      expect(
+        find.textContaining('Условия мероприятия изменились'),
+        findsNothing,
+      );
+      await openAction(tester, find.text('Обновить подбор'));
+      await tester.tap(find.byKey(const Key('apply-filters')));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('Обновить сохранённую'));
+      await tester.pumpAndSettle();
+      expect(
+        repository.selections.single.request.preferences,
+        'Ведущий без конкурсов',
+      );
+    },
+  );
+
+  testWidgets(
     'workspace visual previews',
     (tester) async {
       final font = File('/System/Library/Fonts/Supplemental/Arial.ttf');
@@ -289,6 +370,53 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pump(tester, ClientPage(repository: repository, uid: 'client'));
     expect(find.text('Праздник команды'), findsOneWidget);
+  });
+
+  testWidgets('failed event save keeps dialog and full draft for retry', (
+    tester,
+  ) async {
+    final repository = ClientRepository()..failEventWrite = true;
+    await pump(tester, ClientPage(repository: repository, uid: 'client'));
+    await openAction(tester, find.text('Создать мероприятие'));
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Название'),
+      'Наш день',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Что важно для события?'),
+      'Живые кадры без позирования',
+    );
+    await tester.ensureVisible(find.text('Сохранить'));
+    await tester.tap(find.text('Сохранить'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(EventEditor), findsOneWidget);
+    expect(
+      find.textContaining('Не удалось сохранить мероприятие'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Название'))
+          .controller!
+          .text,
+      'Наш день',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, 'Что важно для события?'),
+          )
+          .controller!
+          .text,
+      'Живые кадры без позирования',
+    );
+    expect(repository.events, isEmpty);
+    repository.failEventWrite = false;
+    await tester.tap(find.text('Сохранить'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EventEditor), findsNothing);
+    expect(repository.events.single.name, 'Наш день');
+    expect(repository.events.single.preferences, 'Живые кадры без позирования');
   });
 
   testWidgets('guest can resume saving a selection after sign in', (
