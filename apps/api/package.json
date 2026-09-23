@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.mjs",
     "db:import": "node --env-file-if-exists=.env src/import.mjs",
+    "admin:create": "node --env-file-if-exists=.env src/admin-create.mjs",
     "admin:grant": "node --env-file-if-exists=.env src/admin-grant.mjs",
     "assistant:smoke": "node --env-file-if-exists=.env src/assistant-smoke.mjs --live",
     "db:seed": "node ../../scripts/seed_catalog.mjs && npm run db:import",

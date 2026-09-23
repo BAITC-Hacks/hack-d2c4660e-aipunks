@@ -11,6 +11,8 @@
 
 Первый запуск импортирует каталог в apps/api/data/event-match.sqlite. База, WAL и .env исключены из Git. Перезапуск обновляет снимок каталога атомарно; кэш сохраняется. Отдельная команда импорта — `npm run db:import`; работающий сервер после изменения каталога надо перезапустить.
 
+При запуске также создаётся первый администратор `admin@eventmatch.local`, если в базе ещё нет админа. Пароль генерируется в `apps/api/data/event-match.sqlite.admin-credentials.json` (исключён из Git) либо берётся из `ADMIN_PASSWORD` в `.env`. Email и имя настраиваются через `ADMIN_EMAIL` и `ADMIN_NAME`. Отдельная команда — `npm run admin:create`; повторный запуск сохраняет существующего администратора. [Подробная инструкция](feature-integration.md#запуск-и-первый-администратор).
+
 Сервер использует один постоянный Dart worker из apps/event_match/tool/matching_worker.dart. На Windows путь к dart.exe определяется через Flutter SDK; при необходимости задайте DART_BIN в серверном .env.
 
 ## Chrome

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 export const root = fileURLToPath(new URL('../../../', import.meta.url));
 export const defaultCatalog = resolve(root, 'apps/event_match/assets/data/catalog.jsonl');
+export const defaultDatabase = resolve(root, 'apps/api/data/event-match.sqlite');
 export function canonical(value) {
   if (Array.isArray(value)) return value.map(canonical);
   if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map(k => [k, canonical(value[k])]));
@@ -13,7 +14,7 @@ export function canonical(value) {
 }
 export const hash = value => createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 
-export function openDatabase(path = process.env.DB_PATH || resolve(root, 'apps/api/data/event-match.sqlite')) {
+export function openDatabase(path = process.env.DB_PATH || defaultDatabase) {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const db = new DatabaseSync(path);
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;
